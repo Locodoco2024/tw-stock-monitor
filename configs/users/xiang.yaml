@@ -1,161 +1,161 @@
 user:
-  id: xiang
-  enabled: true
-  discord_webhook_key: default
+    id: xiang
+    enabled: true
+    discord_webhook_key: default
 
 app:
-  timezone: Asia/Taipei
-  language: zh-TW
-  market_symbol: TAIEX
-  report_base_url: ""
+    timezone: Asia/Taipei
+    language: zh-TW
+    market_symbol: TAIEX
+    report_base_url: ""
 
 stocks:
-  - symbol: "1759"
-    enabled: true
-    holding:
+    - symbol: "1795"
       enabled: true
-      average_cost: 197.53
-    profit_take:
-      alert_at_pct: 50
-      strong_alert_at_pct: 75
-    add_on:
-      enabled: true
-      alert_at_loss_pct: [10, 20, 30]
-      minimum_analysis_score: 40
-      maximum_adjustment: 10
-    peers: []
+      holding:
+          enabled: true
+          average_cost: 197.53
+      profit_take:
+          alert_at_pct: 50
+          strong_alert_at_pct: 75
+      add_on:
+          enabled: true
+          alert_at_loss_pct: [10, 20, 30]
+          minimum_analysis_score: 40
+          maximum_adjustment: 10
+      peers: []
 
-  - symbol: "2356"
-    enabled: true
-    holding:
+    - symbol: "2356"
       enabled: true
-      average_cost: 51.61
-    profit_take:
-      alert_at_pct: 50
-      strong_alert_at_pct: 75
-    add_on:
-      enabled: true
-      alert_at_loss_pct: [10, 20, 30]
-      minimum_analysis_score: 40
-      maximum_adjustment: 10
-    peers: []
+      holding:
+          enabled: true
+          average_cost: 51.61
+      profit_take:
+          alert_at_pct: 50
+          strong_alert_at_pct: 75
+      add_on:
+          enabled: true
+          alert_at_loss_pct: [10, 20, 30]
+          minimum_analysis_score: 40
+          maximum_adjustment: 10
+      peers: []
 
-  - symbol: "2409"
-    enabled: true
-    holding:
+    - symbol: "2409"
       enabled: true
-      average_cost: 17.02
-    profit_take:
-      alert_at_pct: 50
-      strong_alert_at_pct: 75
-    add_on:
-      enabled: true
-      alert_at_loss_pct: [10, 20, 30]
-      minimum_analysis_score: 40
-      maximum_adjustment: 10
-    peers: []
+      holding:
+          enabled: true
+          average_cost: 17.02
+      profit_take:
+          alert_at_pct: 50
+          strong_alert_at_pct: 75
+      add_on:
+          enabled: true
+          alert_at_loss_pct: [10, 20, 30]
+          minimum_analysis_score: 40
+          maximum_adjustment: 10
+      peers: []
 
-  - symbol: "2498"
-    enabled: true
-    holding:
+    - symbol: "2498"
       enabled: true
-      average_cost: 46.72
-    profit_take:
-      alert_at_pct: 50
-      strong_alert_at_pct: 75
-    add_on:
-      enabled: true
-      alert_at_loss_pct: [10, 20, 30]
-      minimum_analysis_score: 40
-      maximum_adjustment: 10
-    peers: []
+      holding:
+          enabled: true
+          average_cost: 46.72
+      profit_take:
+          alert_at_pct: 50
+          strong_alert_at_pct: 75
+      add_on:
+          enabled: true
+          alert_at_loss_pct: [10, 20, 30]
+          minimum_analysis_score: 40
+          maximum_adjustment: 10
+      peers: []
 
-  - symbol: "3003"
-    enabled: true
-    holding:
+    - symbol: "3003"
       enabled: true
-      average_cost: 63.36
-    profit_take:
-      alert_at_pct: 50
-      strong_alert_at_pct: 75
-    add_on:
-      enabled: true
-      alert_at_loss_pct: [10, 20, 30]
-      minimum_analysis_score: 40
-      maximum_adjustment: 10
-    peers: []
+      holding:
+          enabled: true
+          average_cost: 63.36
+      profit_take:
+          alert_at_pct: 50
+          strong_alert_at_pct: 75
+      add_on:
+          enabled: true
+          alert_at_loss_pct: [10, 20, 30]
+          minimum_analysis_score: 40
+          maximum_adjustment: 10
+      peers: []
 
-  - symbol: "3019"
-    enabled: true
-    holding:
+    - symbol: "3019"
       enabled: true
-      average_cost: 138.2
-    profit_take:
-      alert_at_pct: 50
-      strong_alert_at_pct: 75
-    add_on:
-      enabled: true
-      alert_at_loss_pct: [10, 20, 30]
-      minimum_analysis_score: 40
-      maximum_adjustment: 10
-    peers: []
+      holding:
+          enabled: true
+          average_cost: 138.2
+      profit_take:
+          alert_at_pct: 50
+          strong_alert_at_pct: 75
+      add_on:
+          enabled: true
+          alert_at_loss_pct: [10, 20, 30]
+          minimum_analysis_score: 40
+          maximum_adjustment: 10
+      peers: []
 
-  - symbol: "3029"
-    enabled: true
-    holding:
+    - symbol: "3029"
       enabled: true
-      average_cost: 103.9
-    profit_take:
-      alert_at_pct: 50
-      strong_alert_at_pct: 75
-    add_on:
-      enabled: true
-      alert_at_loss_pct: [10, 20, 30]
-      minimum_analysis_score: 40
-      maximum_adjustment: 10
-    peers: []
+      holding:
+          enabled: true
+          average_cost: 103.9
+      profit_take:
+          alert_at_pct: 50
+          strong_alert_at_pct: 75
+      add_on:
+          enabled: true
+          alert_at_loss_pct: [10, 20, 30]
+          minimum_analysis_score: 40
+          maximum_adjustment: 10
+      peers: []
 
-  - symbol: "4566"
-    enabled: true
-    holding:
+    - symbol: "4566"
       enabled: true
-      average_cost: 63.69
-    profit_take:
-      alert_at_pct: 50
-      strong_alert_at_pct: 75
-    add_on:
-      enabled: true
-      alert_at_loss_pct: [10, 20, 30]
-      minimum_analysis_score: 40
-      maximum_adjustment: 10
-    peers: []
+      holding:
+          enabled: true
+          average_cost: 63.69
+      profit_take:
+          alert_at_pct: 50
+          strong_alert_at_pct: 75
+      add_on:
+          enabled: true
+          alert_at_loss_pct: [10, 20, 30]
+          minimum_analysis_score: 40
+          maximum_adjustment: 10
+      peers: []
 
-  - symbol: "6122"
-    enabled: true
-    holding:
+    - symbol: "6122"
       enabled: true
-      average_cost: 48.82
-    profit_take:
-      alert_at_pct: 50
-      strong_alert_at_pct: 75
-    add_on:
-      enabled: true
-      alert_at_loss_pct: [10, 20, 30]
-      minimum_analysis_score: 40
-      maximum_adjustment: 10
-    peers: []
+      holding:
+          enabled: true
+          average_cost: 48.82
+      profit_take:
+          alert_at_pct: 50
+          strong_alert_at_pct: 75
+      add_on:
+          enabled: true
+          alert_at_loss_pct: [10, 20, 30]
+          minimum_analysis_score: 40
+          maximum_adjustment: 10
+      peers: []
 
-  - symbol: "8064"
-    enabled: true
-    holding:
+    - symbol: "8064"
       enabled: true
-      average_cost: 117.83
-    profit_take:
-      alert_at_pct: 50
-      strong_alert_at_pct: 75
-    add_on:
-      enabled: true
-      alert_at_loss_pct: [10, 20, 30]
-      minimum_analysis_score: 40
-      maximum_adjustment: 10
-    peers: []
+      holding:
+          enabled: true
+          average_cost: 117.83
+      profit_take:
+          alert_at_pct: 50
+          strong_alert_at_pct: 75
+      add_on:
+          enabled: true
+          alert_at_loss_pct: [10, 20, 30]
+          minimum_analysis_score: 40
+          maximum_adjustment: 10
+      peers: []
