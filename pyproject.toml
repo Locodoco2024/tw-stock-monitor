@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tw-stock-monitor"
-version = "0.1.1"
+version = "0.1.2"
 description = "Rule-based Taiwan stock monitoring and Discord notification service"
 readme = "README.md"
 requires-python = ">=3.12"

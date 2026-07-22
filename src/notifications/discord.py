@@ -31,16 +31,22 @@ class DiscordNotifier:
         webhook_url: str,
     ) -> None:
         score = result.operation_score
-        direction = "📈" if score > 0 else "📉" if score < 0 else "⚖️"
+        direction = "📈" if score >= 15 else "📉" if score <= -15 else "⚖️"
+        operation_name = "持倉判斷" if result.holding_enabled else "觀察判斷"
         fields: list[dict[str, Any]] = [
             {
-                "name": "操作傾向",
-                "value": f"{result.operation_label} {abs(score):.0f}%",
+                "name": operation_name,
+                "value": result.operation_label,
                 "inline": True,
             },
             {
-                "name": "個股分析",
-                "value": f"{result.objective_label} {abs(result.objective_score):.0f}%",
+                "name": "方向分數",
+                "value": _score_text(score),
+                "inline": True,
+            },
+            {
+                "name": "股票本身",
+                "value": f"{result.objective_label}（{_score_text(result.objective_score)}）",
                 "inline": True,
             },
             {
@@ -49,14 +55,14 @@ class DiscordNotifier:
                 "inline": True,
             },
             {
-                "name": "資料完整度",
+                "name": "分析涵蓋度",
                 "value": f"{result.completeness:.0f}%",
                 "inline": True,
             },
         ]
         if result.price_return_pct is not None:
             fields.insert(
-                2,
+                3,
                 {
                     "name": "價格報酬",
                     "value": f"{result.price_return_pct:+.1f}%",
@@ -84,9 +90,15 @@ class DiscordNotifier:
             "title": f"{direction} {result.symbol} {result.name}",
             "description": result.summary,
             "fields": fields,
-            "footer": {"text": "規則分析結果，不代表未來漲跌機率或投資建議"},
+            "footer": {"text": "方向分數是規則分析結果，不代表未來漲跌機率或投資建議"},
             "timestamp": result.analyzed_at,
         }
         if result.report_url:
             embed["url"] = result.report_url
         self.http.post_json(webhook_url, payload={"embeds": [embed]})
+
+
+def _score_text(score: float) -> str:
+    if score == 0:
+        return "0 / 100"
+    return f"{score:+.0f} / 100"

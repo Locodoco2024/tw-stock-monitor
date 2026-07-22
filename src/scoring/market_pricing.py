@@ -67,6 +67,8 @@ def score_market_pricing(
     return_5d = indicators.get("return_5d")
     market_return_5d = market.get("return_5d")
     if return_5d is not None and market_return_5d is not None:
+        has_peer_comparison = peer_return_5d is not None
+        comparison_basis = "大盤與同業" if has_peer_comparison else "大盤"
         relative = return_5d - market_return_5d - (peer_return_5d or 0)
         relative_score = 0.0
         if relative >= 8:
@@ -84,10 +86,14 @@ def score_market_pricing(
                     module="market_pricing",
                     score=relative_score,
                     message=(
-                        f"近五日相對大盤與同業表現{'較強' if relative_score > 0 else '較弱'} "
+                        f"近五日相對{comparison_basis}表現"
+                        f"{'較強' if relative_score > 0 else '較弱'} "
                         f"({relative:+.1f} 個百分點)"
                     ),
-                    values={"relative_return_5d_pct": relative},
+                    values={
+                        "relative_return_5d_pct": relative,
+                        "comparison_basis": comparison_basis,
+                    },
                 )
             )
         for threshold in scoring.get("market_pricing", {}).get(
@@ -100,10 +106,13 @@ def score_market_pricing(
                         module="market_pricing",
                         score=float(threshold["score"]),
                         message=(
-                            f"近五日已相對大盤與同業上漲 {relative:.1f}%，"
+                            f"近五日已相對{comparison_basis}上漲 {relative:.1f}%，"
                             "部分正面因素可能已提前反映"
                         ),
-                        values={"relative_return_5d_pct": relative},
+                        values={
+                            "relative_return_5d_pct": relative,
+                            "comparison_basis": comparison_basis,
+                        },
                     )
                 )
                 break

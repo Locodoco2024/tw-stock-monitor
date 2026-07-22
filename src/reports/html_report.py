@@ -5,17 +5,8 @@ import json
 from pathlib import Path
 from typing import Iterable
 
-from src.models import AnalysisResult, RuleResult
-
-
-MODULE_NAMES = {
-    "official_events": "官方事件與催化",
-    "market_pricing": "市場定價狀態",
-    "industry_peers": "產業與同業確認",
-    "company_capacity": "公司承接能力",
-    "market_environment": "大盤環境",
-    "holding": "持倉策略調整",
-}
+from src.models import AnalysisResult, ModuleResult, RuleResult
+from src.scoring.plain_language import MODULE_NAMES, module_plain_points, plain_message
 
 
 def write_stock_report(result: AnalysisResult, output_dir: str | Path) -> Path:
@@ -40,15 +31,15 @@ def write_index(results: Iterable[AnalysisResult], output_dir: str | Path) -> Pa
             f"<tr><td>{_h(result.user_id)}</td><td><a href='{_h(path)}'>"
             f"{_h(result.symbol)} {_h(result.name)}</a></td>"
             f"<td>{_h(result.operation_label)}</td>"
-            f"<td>{result.operation_score:+.1f}</td>"
+            f"<td>{_h(_score_text(result.operation_score))}</td>"
             f"<td>{result.completeness:.0f}%</td></tr>"
         )
     document = _page(
         "台股監控報告",
         "<h1>台股監控報告</h1>"
-        "<p class='muted'>規則分析結果，不代表未來漲跌機率或投資建議。</p>"
-        "<table><thead><tr><th>使用者</th><th>股票</th><th>操作傾向</th>"
-        "<th>指數</th><th>完整度</th></tr></thead><tbody>"
+        "<p class='muted'>方向分數是規則分析結果，不代表未來漲跌機率或投資建議。</p>"
+        "<table><thead><tr><th>使用者</th><th>股票</th><th>操作判斷</th>"
+        "<th>方向分數</th><th>分析涵蓋度</th></tr></thead><tbody>"
         + "".join(rows)
         + "</tbody></table>",
     )
@@ -61,13 +52,13 @@ def render_stock_report(result: AnalysisResult) -> str:
     quote = result.quote
     headline = (
         f"<div class='score-card'><div class='score-label'>{_h(result.operation_label)}</div>"
-        f"<div class='score'>{abs(result.operation_score):.0f}%</div></div>"
+        f"<div class='score'>{_h(_score_text(result.operation_score))}</div></div>"
     )
     metrics = [
-        ("個股分析", f"{_h(result.objective_label)} {abs(result.objective_score):.0f}%"),
+        ("股票本身", f"{_h(result.objective_label)}（{_h(_score_text(result.objective_score))}）"),
         ("機會分數", f"{result.opportunity_score:.1f}"),
         ("風險分數", f"{result.risk_score:.1f}"),
-        ("資料完整度", f"{result.completeness:.0f}%"),
+        ("分析涵蓋度", f"{result.completeness:.0f}%"),
     ]
     if quote:
         metrics.insert(0, ("目前價格", f"{quote.price:g}"))
@@ -81,11 +72,7 @@ def render_stock_report(result: AnalysisResult) -> str:
     module_html = "".join(_render_module(module) for module in result.modules)
     holding_html = ""
     if result.holding_rules:
-        holding_html = (
-            "<section><h2>持倉策略調整</h2>"
-            + _rules_table(result.holding_rules)
-            + "</section>"
-        )
+        holding_html = _render_holding(result.holding_rules)
     errors = ""
     if result.errors:
         errors = (
@@ -100,7 +87,7 @@ def render_stock_report(result: AnalysisResult) -> str:
     <p class='muted'>分析時間：{_h(result.analyzed_at)}</p></header>
     {headline}
     <div class='metrics'>{metric_html}</div>
-    <section><h2>簡短結論</h2><p class='summary'>{_h(result.summary)}</p></section>
+    <section class='plain-summary'><h2>白話結論</h2><p class='summary'>{_h(result.summary)}</p></section>
     {holding_html}
     {module_html}
     {errors}
@@ -109,17 +96,36 @@ def render_stock_report(result: AnalysisResult) -> str:
     return _page(f"{result.symbol} {result.name} 分析", body)
 
 
-def _render_module(module) -> str:
+def _render_holding(rules: list[RuleResult]) -> str:
+    points = "".join(f"<li>{_h(plain_message(rule))}</li>" for rule in rules)
+    return (
+        "<section><h2>持倉策略</h2>"
+        f"<ul class='plain-points'>{points}</ul>"
+        "<details><summary>查看持倉計分細節</summary>"
+        f"{_rules_table(rules)}</details></section>"
+    )
+
+
+def _render_module(module: ModuleResult) -> str:
     name = MODULE_NAMES.get(module.module, module.module)
+    points = module_plain_points(module)
+    point_html = (
+        "<ul class='plain-points'>"
+        + "".join(f"<li>{_h(point)}</li>" for point in points)
+        + "</ul>"
+        if points
+        else "<p class='muted'>本模組目前沒有明顯正面或負面訊號。</p>"
+    )
     notes = ""
     if module.notes:
         notes = "<ul class='notes'>" + "".join(
             f"<li>{_h(note)}</li>" for note in module.notes
         ) + "</ul>"
     return (
-        f"<section><h2>{_h(name)}</h2>"
+        f"<section><h2>{_h(name)}</h2>{point_html}{notes}"
+        "<details><summary>查看計分細節與技術數值</summary>"
         f"<p>模組淨貢獻：<strong>{module.score:+.1f}</strong> / {module.weight:.0f}</p>"
-        f"{notes}{_rules_table(module.rules)}</section>"
+        f"{_rules_table(module.rules)}</details></section>"
     )
 
 
@@ -135,7 +141,7 @@ def _rules_table(rules: list[RuleResult]) -> str:
             f"<td>{_h(rule.message)}</td><td>{source}</td></tr>"
         )
     return (
-        "<table><thead><tr><th>規則</th><th>分數</th><th>說明</th><th></th></tr>"
+        "<table><thead><tr><th>規則</th><th>分數</th><th>技術說明</th><th></th></tr>"
         "</thead><tbody>" + "".join(rows) + "</tbody></table>"
     )
 
@@ -153,10 +159,11 @@ body {{ max-width: 1100px; margin: 0 auto; padding: 28px 18px 80px; line-height:
 a {{ color: #4f86f7; }}
 header {{ margin: 18px 0; }}
 .muted {{ opacity: .7; }}
-.summary {{ font-size: 1.08rem; }}
+.summary {{ font-size: 1.08rem; margin-bottom: 0; }}
+.plain-summary {{ border-left: 4px solid #4f86f7; padding: 2px 0 2px 18px; }}
 .score-card {{ display: inline-flex; align-items: baseline; gap: 14px; border: 1px solid #8885; border-radius: 16px; padding: 18px 24px; margin: 10px 0 18px; }}
 .score-label {{ font-size: 1.15rem; font-weight: 700; }}
-.score {{ font-size: 2.3rem; font-weight: 800; }}
+.score {{ font-size: 2rem; font-weight: 800; }}
 .metrics {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }}
 .metric {{ border: 1px solid #8885; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; }}
 .metric span {{ opacity: .7; font-size: .9rem; }}
@@ -168,8 +175,17 @@ th {{ background: #8882; }}
 td.number {{ white-space: nowrap; font-variant-numeric: tabular-nums; }}
 pre {{ white-space: pre-wrap; word-break: break-word; border: 1px solid #8885; border-radius: 12px; padding: 14px; overflow: auto; }}
 .notes {{ opacity: .8; }}
+.plain-points {{ padding-left: 1.25rem; }}
+details {{ margin-top: 12px; }}
+details > summary {{ cursor: pointer; font-weight: 650; }}
 </style>
 </head><body>{body}</body></html>"""
+
+
+def _score_text(score: float) -> str:
+    if score == 0:
+        return "0 / 100"
+    return f"{score:+.0f} / 100"
 
 
 def _h(value: object) -> str:

@@ -117,7 +117,13 @@ class ScoringEngine:
             price_return_pct=round(price_return_pct, 2) if price_return_pct is not None else None,
             modules=modules,
             holding_rules=holding_rules,
-            summary=build_summary(modules, holding_rules, completeness),
+            summary=build_summary(
+                modules,
+                holding_rules,
+                completeness,
+                objective_score,
+                holding_enabled,
+            ),
             new_event_ids=new_event_ids,
             errors=bundle.errors,
         )
