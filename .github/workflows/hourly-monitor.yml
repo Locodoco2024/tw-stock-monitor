@@ -8,9 +8,10 @@ on:
                 required: false
                 type: boolean
                 default: false
+
     schedule:
-        - cron: "17 9-14 * * 1-5"
-          timezone: "Asia/Taipei"
+        # UTC 01:17～06:17 = 台灣時間 09:17～14:17
+        - cron: "17 1-6 * * 1-5"
 
 permissions:
     contents: write
