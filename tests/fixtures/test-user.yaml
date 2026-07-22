@@ -1,0 +1,42 @@
+user:
+    id: test
+    enabled: true
+    discord_webhook_key: default
+
+app:
+    timezone: Asia/Taipei
+    language: zh-TW
+    market_symbol: TAIEX
+    report_base_url: ""
+
+stocks:
+    - symbol: "2330"
+      enabled: true
+
+      holding:
+          enabled: true
+          average_cost: 620
+
+      profit_take:
+          alert_at_pct: 50
+          strong_alert_at_pct: 75
+
+      add_on:
+          enabled: true
+          alert_at_loss_pct: [10, 20, 30]
+          minimum_analysis_score: 40
+          maximum_adjustment: 10
+
+      peers:
+          - "2303"
+          - "2454"
+
+    - symbol: "2303"
+      enabled: true
+
+      holding:
+          enabled: false
+
+      peers:
+          - "2330"
+          - "5347"
