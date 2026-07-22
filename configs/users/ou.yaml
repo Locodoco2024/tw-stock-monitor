@@ -1,0 +1,204 @@
+# ============================================================
+# 使用者設定
+# ============================================================
+user:
+  id: ou
+  enabled: true
+  discord_webhook_key: default
+
+# ============================================================
+# 共用應用程式設定
+# ============================================================
+app:
+  timezone: Asia/Taipei
+  language: zh-TW
+  market_symbol: TAIEX
+  report_base_url: ""
+
+# ============================================================
+# 持股設定
+#
+# 圖片中的「平均單價」已填入 average_cost。
+# 未填持股數量，僅用於價格報酬與持倉傾向計算。
+# peers 暫時留空，不進行手動同業比較。
+# ============================================================
+stocks:
+  - symbol: "1815" # 富喬
+    enabled: true
+    holding:
+      enabled: true
+      average_cost: 97.85
+    profit_take:
+      alert_at_pct: 50
+      strong_alert_at_pct: 75
+    add_on:
+      enabled: true
+      alert_at_loss_pct: [10, 20, 30]
+      minimum_analysis_score: 40
+      maximum_adjustment: 10
+    peers: []
+
+  - symbol: "2303" # 聯電
+    enabled: true
+    holding:
+      enabled: true
+      average_cost: 129.5
+    profit_take:
+      alert_at_pct: 50
+      strong_alert_at_pct: 75
+    add_on:
+      enabled: true
+      alert_at_loss_pct: [10, 20, 30]
+      minimum_analysis_score: 40
+      maximum_adjustment: 10
+    peers: []
+
+  - symbol: "2408" # 南亞科
+    enabled: true
+    holding:
+      enabled: true
+      average_cost: 206.5
+    profit_take:
+      alert_at_pct: 50
+      strong_alert_at_pct: 75
+    add_on:
+      enabled: true
+      alert_at_loss_pct: [10, 20, 30]
+      minimum_analysis_score: 40
+      maximum_adjustment: 10
+    peers: []
+
+  - symbol: "2409" # 友達
+    enabled: true
+    holding:
+      enabled: true
+      average_cost: 20.95
+    profit_take:
+      alert_at_pct: 50
+      strong_alert_at_pct: 75
+    add_on:
+      enabled: true
+      alert_at_loss_pct: [10, 20, 30]
+      minimum_analysis_score: 40
+      maximum_adjustment: 10
+    peers: []
+
+  - symbol: "2421" # 建準
+    enabled: true
+    holding:
+      enabled: true
+      average_cost: 153
+    profit_take:
+      alert_at_pct: 50
+      strong_alert_at_pct: 75
+    add_on:
+      enabled: true
+      alert_at_loss_pct: [10, 20, 30]
+      minimum_analysis_score: 40
+      maximum_adjustment: 10
+    peers: []
+
+  - symbol: "3289" # 宜特
+    enabled: true
+    holding:
+      enabled: true
+      average_cost: 164.35
+    profit_take:
+      alert_at_pct: 50
+      strong_alert_at_pct: 75
+    add_on:
+      enabled: true
+      alert_at_loss_pct: [10, 20, 30]
+      minimum_analysis_score: 40
+      maximum_adjustment: 10
+    peers: []
+
+  - symbol: "3587" # 閎康
+    enabled: true
+    holding:
+      enabled: true
+      average_cost: 317.36
+    profit_take:
+      alert_at_pct: 50
+      strong_alert_at_pct: 75
+    add_on:
+      enabled: true
+      alert_at_loss_pct: [10, 20, 30]
+      minimum_analysis_score: 40
+      maximum_adjustment: 10
+    peers: []
+
+  - symbol: "3653" # 健策
+    enabled: true
+    holding:
+      enabled: true
+      average_cost: 3265
+    profit_take:
+      alert_at_pct: 50
+      strong_alert_at_pct: 75
+    add_on:
+      enabled: true
+      alert_at_loss_pct: [10, 20, 30]
+      minimum_analysis_score: 40
+      maximum_adjustment: 10
+    peers: []
+
+  - symbol: "3665" # 貿聯-KY
+    enabled: true
+    holding:
+      enabled: true
+      average_cost: 2013.33
+    profit_take:
+      alert_at_pct: 50
+      strong_alert_at_pct: 75
+    add_on:
+      enabled: true
+      alert_at_loss_pct: [10, 20, 30]
+      minimum_analysis_score: 40
+      maximum_adjustment: 10
+    peers: []
+
+  - symbol: "3707" # 漢磊
+    enabled: true
+    holding:
+      enabled: true
+      average_cost: 85.85
+    profit_take:
+      alert_at_pct: 50
+      strong_alert_at_pct: 75
+    add_on:
+      enabled: true
+      alert_at_loss_pct: [10, 20, 30]
+      minimum_analysis_score: 40
+      maximum_adjustment: 10
+    peers: []
+
+  - symbol: "5269" # 祥碩
+    enabled: true
+    holding:
+      enabled: true
+      average_cost: 1410
+    profit_take:
+      alert_at_pct: 50
+      strong_alert_at_pct: 75
+    add_on:
+      enabled: true
+      alert_at_loss_pct: [10, 20, 30]
+      minimum_analysis_score: 40
+      maximum_adjustment: 10
+    peers: []
+
+  - symbol: "8046" # 南電
+    enabled: true
+    holding:
+      enabled: true
+      average_cost: 871.8
+    profit_take:
+      alert_at_pct: 50
+      strong_alert_at_pct: 75
+    add_on:
+      enabled: true
+      alert_at_loss_pct: [10, 20, 30]
+      minimum_analysis_score: 40
+      maximum_adjustment: 10
+    peers: []
