@@ -1,11 +1,11 @@
 {
-  "updated_at": "2026-07-22T01:50:52.051588+00:00",
+  "updated_at": "2026-07-22T02:09:36.901269+00:00",
   "records": {
     "xiang:1795": {
       "operation_score": -9,
       "operation_label": "續抱觀察",
       "risk_score": 13.0,
-      "notified_at": "2026-07-22T01:50:43.068304+00:00",
+      "notified_at": "2026-07-22T02:09:28.600667+00:00",
       "processed_event_ids": [],
       "triggered_rule_ids": []
     },
@@ -13,7 +13,7 @@
       "operation_score": 4,
       "operation_label": "續抱觀察",
       "risk_score": 0.0,
-      "notified_at": "2026-07-22T01:50:43.883459+00:00",
+      "notified_at": "2026-07-22T02:09:29.631003+00:00",
       "processed_event_ids": [],
       "triggered_rule_ids": []
     },
@@ -21,7 +21,7 @@
       "operation_score": -33,
       "operation_label": "輕微減碼傾向",
       "risk_score": 35.0,
-      "notified_at": "2026-07-22T01:50:44.649883+00:00",
+      "notified_at": "2026-07-22T02:09:30.055975+00:00",
       "processed_event_ids": [
         "6e42c23061f3c73c591a",
         "e26b431e25178b2ee3a2",
@@ -35,7 +35,7 @@
       "operation_score": -12,
       "operation_label": "續抱觀察",
       "risk_score": 13.0,
-      "notified_at": "2026-07-22T01:50:45.527916+00:00",
+      "notified_at": "2026-07-22T02:09:31.129427+00:00",
       "processed_event_ids": [],
       "triggered_rule_ids": []
     },
@@ -43,7 +43,7 @@
       "operation_score": 7,
       "operation_label": "續抱觀察",
       "risk_score": 0.0,
-      "notified_at": "2026-07-22T01:50:46.414672+00:00",
+      "notified_at": "2026-07-22T02:09:32.086469+00:00",
       "processed_event_ids": [],
       "triggered_rule_ids": []
     },
@@ -51,7 +51,7 @@
       "operation_score": -1,
       "operation_label": "續抱觀察",
       "risk_score": 7.0,
-      "notified_at": "2026-07-22T01:50:47.163125+00:00",
+      "notified_at": "2026-07-22T02:09:33.045392+00:00",
       "processed_event_ids": [],
       "triggered_rule_ids": []
     },
@@ -59,7 +59,7 @@
       "operation_score": 12.0,
       "operation_label": "續抱觀察",
       "risk_score": 0.0,
-      "notified_at": "2026-07-22T01:50:48.018877+00:00",
+      "notified_at": "2026-07-22T02:09:33.993505+00:00",
       "processed_event_ids": [],
       "triggered_rule_ids": []
     },
@@ -67,7 +67,7 @@
       "operation_score": 15.0,
       "operation_label": "輕微加碼傾向",
       "risk_score": 1.0,
-      "notified_at": "2026-07-22T01:50:49.023395+00:00",
+      "notified_at": "2026-07-22T02:09:34.871429+00:00",
       "processed_event_ids": [
         "8d9a067bf5af7a1eac63"
       ],
@@ -77,7 +77,7 @@
       "operation_score": 7.0,
       "operation_label": "續抱觀察",
       "risk_score": 1.0,
-      "notified_at": "2026-07-22T01:50:51.273746+00:00",
+      "notified_at": "2026-07-22T02:09:35.934829+00:00",
       "processed_event_ids": [],
       "triggered_rule_ids": []
     },
@@ -85,9 +85,118 @@
       "operation_score": 1,
       "operation_label": "續抱觀察",
       "risk_score": 1.0,
-      "notified_at": "2026-07-22T01:50:52.051565+00:00",
+      "notified_at": "2026-07-22T02:09:36.901242+00:00",
       "processed_event_ids": [],
       "triggered_rule_ids": []
+    },
+    "ou:1815": {
+      "operation_score": 3,
+      "operation_label": "續抱觀察",
+      "risk_score": 7.0,
+      "notified_at": "2026-07-22T02:09:16.059546+00:00",
+      "processed_event_ids": [],
+      "triggered_rule_ids": []
+    },
+    "ou:2303": {
+      "operation_score": 9,
+      "operation_label": "續抱觀察",
+      "risk_score": 1.0,
+      "notified_at": "2026-07-22T02:09:17.978887+00:00",
+      "processed_event_ids": [
+        "6ef78c7134c2d6ac16f4",
+        "95e1b28fd59378664b6e"
+      ],
+      "triggered_rule_ids": []
+    },
+    "ou:2408": {
+      "operation_score": -34,
+      "operation_label": "輕微減碼傾向",
+      "risk_score": 45.0,
+      "notified_at": "2026-07-22T02:09:18.802334+00:00",
+      "processed_event_ids": [],
+      "triggered_rule_ids": [
+        "holding.strong_profit_take"
+      ]
+    },
+    "ou:2409": {
+      "operation_score": -3,
+      "operation_label": "續抱觀察",
+      "risk_score": 5.0,
+      "notified_at": "2026-07-22T02:09:19.658191+00:00",
+      "processed_event_ids": [
+        "6e42c23061f3c73c591a",
+        "e26b431e25178b2ee3a2",
+        "ca513884ed8dc1e9e43f"
+      ],
+      "triggered_rule_ids": []
+    },
+    "ou:2421": {
+      "operation_score": 0,
+      "operation_label": "續抱觀察",
+      "risk_score": 10.0,
+      "notified_at": "2026-07-22T02:09:20.614972+00:00",
+      "processed_event_ids": [],
+      "triggered_rule_ids": []
+    },
+    "ou:3289": {
+      "operation_score": -2,
+      "operation_label": "續抱觀察",
+      "risk_score": 4.0,
+      "notified_at": "2026-07-22T02:09:21.587728+00:00",
+      "processed_event_ids": [],
+      "triggered_rule_ids": []
+    },
+    "ou:3587": {
+      "operation_score": 4,
+      "operation_label": "續抱觀察",
+      "risk_score": 4.0,
+      "notified_at": "2026-07-22T02:09:22.641264+00:00",
+      "processed_event_ids": [],
+      "triggered_rule_ids": []
+    },
+    "ou:3653": {
+      "operation_score": 13.0,
+      "operation_label": "續抱觀察",
+      "risk_score": 0.0,
+      "notified_at": "2026-07-22T02:09:23.508266+00:00",
+      "processed_event_ids": [],
+      "triggered_rule_ids": []
+    },
+    "ou:3665": {
+      "operation_score": 11.0,
+      "operation_label": "續抱觀察",
+      "risk_score": 0.0,
+      "notified_at": "2026-07-22T02:09:24.377833+00:00",
+      "processed_event_ids": [
+        "6a1b9061cb10a5c9ffdd"
+      ],
+      "triggered_rule_ids": []
+    },
+    "ou:3707": {
+      "operation_score": -8,
+      "operation_label": "續抱觀察",
+      "risk_score": 9.0,
+      "notified_at": "2026-07-22T02:09:25.309975+00:00",
+      "processed_event_ids": [],
+      "triggered_rule_ids": []
+    },
+    "ou:5269": {
+      "operation_score": 11,
+      "operation_label": "續抱觀察",
+      "risk_score": 0.0,
+      "notified_at": "2026-07-22T02:09:26.224041+00:00",
+      "processed_event_ids": [],
+      "triggered_rule_ids": []
+    },
+    "ou:8046": {
+      "operation_score": 5,
+      "operation_label": "續抱觀察",
+      "risk_score": 10.0,
+      "notified_at": "2026-07-22T02:09:27.537085+00:00",
+      "processed_event_ids": [],
+      "triggered_rule_ids": [
+        "holding.profit_watch"
+      ]
     }
   }
 }
