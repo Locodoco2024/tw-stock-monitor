@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-07-22T03:50:43.435032+00:00",
+  "updated_at": "2026-07-22T05:55:21.062076+00:00",
   "records": {
     "xiang:1795": {
       "operation_score": -9,
@@ -74,7 +74,7 @@
       "triggered_rule_ids": []
     },
     "xiang:6122": {
-      "operation_score": 7.0,
+      "operation_score": 1.0,
       "operation_label": "續抱觀察",
       "risk_score": 1.0,
       "notified_at": "2026-07-22T03:50:42.565510+00:00",
