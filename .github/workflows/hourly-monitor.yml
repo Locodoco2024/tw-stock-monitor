@@ -1,113 +1,113 @@
 name: Hourly stock monitor
 
 on:
-  workflow_dispatch:
-    inputs:
-      force_notify:
-        description: Force Discord notification for this run
-        required: false
-        type: boolean
-        default: false
-  schedule:
-    - cron: "17 * * * *"
-      timezone: "Asia/Taipei"
+    workflow_dispatch:
+        inputs:
+            force_notify:
+                description: Force Discord notification for this run
+                required: false
+                type: boolean
+                default: false
+    schedule:
+        - cron: "17 9-14 * * 1-5"
+          timezone: "Asia/Taipei"
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+    contents: write
+    pages: write
+    id-token: write
 
 concurrency:
-  group: hourly-stock-monitor
-  cancel-in-progress: false
+    group: hourly-stock-monitor
+    cancel-in-progress: false
 
 jobs:
-  monitor:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    monitor:
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
 
-    steps:
-      - name: Checkout main branch
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        steps:
+            - name: Checkout main branch
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+                  cache: pip
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+            - name: Install dependencies
+              run: pip install -r requirements.txt
 
-      - name: Restore state branch
-        shell: bash
-        run: |
-          mkdir -p runtime
-          git fetch origin state || true
-          if git show-ref --verify --quiet refs/remotes/origin/state; then
-            git show origin/state:state.json > runtime/state.json || true
-          fi
+            - name: Restore state branch
+              shell: bash
+              run: |
+                  mkdir -p runtime
+                  git fetch origin state || true
+                  if git show-ref --verify --quiet refs/remotes/origin/state; then
+                    git show origin/state:state.json > runtime/state.json || true
+                  fi
 
-      - name: Run monitor
-        env:
-          FUGLE_API_KEY: ${{ secrets.FUGLE_API_KEY }}
-          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          DISCORD_WEBHOOKS_JSON: ${{ secrets.DISCORD_WEBHOOKS_JSON }}
-          REPORT_BASE_URL: ${{ vars.REPORT_BASE_URL }}
-        run: |
-          EXTRA_ARGS=""
-          if [ "${{ inputs.force_notify || false }}" = "true" ]; then
-            EXTRA_ARGS="--force-notify"
-          fi
-          python -m src.main $EXTRA_ARGS
+            - name: Run monitor
+              env:
+                  FUGLE_API_KEY: ${{ secrets.FUGLE_API_KEY }}
+                  FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+                  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+                  DISCORD_WEBHOOKS_JSON: ${{ secrets.DISCORD_WEBHOOKS_JSON }}
+                  REPORT_BASE_URL: ${{ vars.REPORT_BASE_URL }}
+              run: |
+                  EXTRA_ARGS=""
+                  if [ "${{ inputs.force_notify || false }}" = "true" ]; then
+                    EXTRA_ARGS="--force-notify"
+                  fi
+                  python -m src.main $EXTRA_ARGS
 
-      - name: Upload report artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: stock-monitor-report-${{ github.run_id }}
-          path: site
-          retention-days: 14
+            - name: Upload report artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: stock-monitor-report-${{ github.run_id }}
+                  path: site
+                  retention-days: 14
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+            - name: Configure GitHub Pages
+              uses: actions/configure-pages@v5
 
-      - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
+            - name: Upload GitHub Pages artifact
+              uses: actions/upload-pages-artifact@v3
+              with:
+                  path: site
 
-      - name: Save state branch
-        shell: bash
-        run: |
-          set -euo pipefail
-          cp runtime/state.json /tmp/stock-monitor-state.json
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            - name: Save state branch
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  cp runtime/state.json /tmp/stock-monitor-state.json
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git fetch origin state || true
-          if git show-ref --verify --quiet refs/remotes/origin/state; then
-            git switch -C state origin/state
-          else
-            git switch --orphan state
-          fi
-          git rm -rf . || true
-          git clean -fdx
-          cp /tmp/stock-monitor-state.json state.json
-          git add state.json
-          git commit -m "Update monitor state [skip ci]" || true
-          git push origin state
+                  git fetch origin state || true
+                  if git show-ref --verify --quiet refs/remotes/origin/state; then
+                    git switch -C state origin/state
+                  else
+                    git switch --orphan state
+                  fi
+                  git rm -rf . || true
+                  git clean -fdx
+                  cp /tmp/stock-monitor-state.json state.json
+                  git add state.json
+                  git commit -m "Update monitor state [skip ci]" || true
+                  git push origin state
 
-  deploy:
-    needs: monitor
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    deploy:
+        needs: monitor
+        runs-on: ubuntu-latest
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
 
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        steps:
+            - name: Deploy to GitHub Pages
+              id: deployment
+              uses: actions/deploy-pages@v4
