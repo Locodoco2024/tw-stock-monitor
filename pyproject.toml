@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tw-stock-monitor"
+version = "0.1.1"
+description = "Rule-based Taiwan stock monitoring and Discord notification service"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [{name = "tw-stock-monitor contributors"}]
+dependencies = [
+  "requests>=2.32,<3",
+  "PyYAML>=6.0,<7",
+  "pandas>=2.2,<3",
+  "numpy>=2.0,<3",
+  "python-dateutil>=2.9,<3"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<9",
+  "pytest-cov>=5,<7",
+  "ruff>=0.8,<1"
+]
+
+[project.scripts]
+tw-stock-monitor = "src.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+.env
+runtime/*.json
+!runtime/.gitkeep
+site/
+coverage.xml
+.coverage
+htmlcov/
+.DS_Store
+site-test/

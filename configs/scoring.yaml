@@ -1,0 +1,113 @@
+version: 1
+
+modules:
+  official_events:
+    weight: 25
+  market_pricing:
+    weight: 25
+  industry_peers:
+    weight: 20
+  company_capacity:
+    weight: 20
+  market_environment:
+    weight: 10
+
+labels:
+  strong_positive: 70
+  positive: 40
+  slight_positive: 15
+  slight_negative: -15
+  negative: -40
+  strong_negative: -70
+
+notification:
+  score_change_threshold: 15
+  risk_change_threshold: 10
+  cooldown_hours: 12
+  send_on_first_run: true
+
+completeness:
+  normal_minimum: 80
+  warning_minimum: 60
+  capped_minimum: 40
+  capped_score: 39
+
+market_pricing:
+  pre_event_relative_return_penalties:
+    - min_pct: 20
+      score: -8
+    - min_pct: 12
+      score: -6
+    - min_pct: 7
+      score: -4
+    - min_pct: 3
+      score: -2
+  price_extension_atr_penalties:
+    - min_atr: 2.5
+      score: -5
+    - min_atr: 2.0
+      score: -3
+    - min_atr: 1.5
+      score: -2
+    - min_atr: 1.0
+      score: -1
+
+holding_defaults:
+  profit_take_adjustments:
+    - min_profit_pct: 75
+      score: -45
+      level: strong_profit_take
+    - min_profit_pct: 50
+      score: -30
+      level: profit_take
+    - min_profit_pct: 30
+      score: -10
+      level: profit_watch
+  drawdown_adjustments:
+    - min_loss_pct: 30
+      score: 10
+    - min_loss_pct: 20
+      score: 8
+    - min_loss_pct: 10
+      score: 5
+
+# Conservative rule-based classification. A match is ignored when a negation term
+# occurs close to the matched phrase.
+official_event_rules:
+  negation_terms:
+    - 尚未
+    - 並未
+    - 未取得
+    - 否認
+    - 澄清
+    - 非屬事實
+    - 無此情事
+  rules:
+    - id: confirmed_order
+      phrases: [取得訂單, 簽訂供貨合約, 簽署採購合約, 接獲訂單]
+      score: 10
+      title: 正式訂單或供貨合約
+    - id: production_start
+      phrases: [開始量產, 正式量產, 開始出貨, 正式出貨]
+      score: 8
+      title: 量產或出貨進度
+    - id: capacity_expansion
+      phrases: [擴充產能, 新廠啟用, 擴建廠房, 增加產能]
+      score: 5
+      title: 擴產或新產能
+    - id: price_increase
+      phrases: [調漲價格, 產品漲價, 提高報價]
+      score: 5
+      title: 產品價格調整
+    - id: contract_termination
+      phrases: [終止合約, 取消訂單, 解除契約]
+      score: -15
+      title: 合約或訂單終止
+    - id: production_delay
+      phrases: [延後量產, 延遲出貨, 暫停生產]
+      score: -10
+      title: 生產或出貨延誤
+    - id: major_loss
+      phrases: [重大損失, 提列減損, 災害損失]
+      score: -8
+      title: 重大損失或減損
