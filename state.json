@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-07-22T08:47:47.834272+00:00",
+  "updated_at": "2026-07-23T03:41:48.199848+00:00",
   "records": {
     "xiang:1795": {
       "operation_score": -3,
@@ -59,8 +59,10 @@
       "operation_score": 16,
       "operation_label": "輕微加碼傾向",
       "risk_score": 0.0,
-      "notified_at": "2026-07-22T08:47:45.630203+00:00",
-      "processed_event_ids": [],
+      "notified_at": "2026-07-23T03:41:45.611537+00:00",
+      "processed_event_ids": [
+        "2e891b924913af6a53ef"
+      ],
       "triggered_rule_ids": []
     },
     "xiang:4566": {
@@ -74,7 +76,7 @@
       "triggered_rule_ids": []
     },
     "xiang:6122": {
-      "operation_score": 0,
+      "operation_score": 6,
       "operation_label": "續抱觀察",
       "risk_score": 1.0,
       "notified_at": "2026-07-22T03:50:42.565510+00:00",
