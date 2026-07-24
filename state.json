@@ -1,8 +1,8 @@
 {
-  "updated_at": "2026-07-23T07:46:09.026399+00:00",
+  "updated_at": "2026-07-24T03:21:15.751727+00:00",
   "records": {
     "xiang:1795": {
-      "operation_score": -5,
+      "operation_score": -3,
       "operation_label": "續抱觀察",
       "risk_score": 13.0,
       "notified_at": "2026-07-22T03:50:35.468043+00:00",
@@ -10,15 +10,15 @@
       "triggered_rule_ids": []
     },
     "xiang:2356": {
-      "operation_score": 14.0,
-      "operation_label": "續抱觀察",
+      "operation_score": 22.0,
+      "operation_label": "輕微加碼傾向",
       "risk_score": 0.0,
-      "notified_at": "2026-07-22T03:50:36.355516+00:00",
+      "notified_at": "2026-07-24T03:21:09.536223+00:00",
       "processed_event_ids": [],
       "triggered_rule_ids": []
     },
     "xiang:2409": {
-      "operation_score": -27,
+      "operation_score": -25,
       "operation_label": "輕微減碼傾向",
       "risk_score": 35.0,
       "notified_at": "2026-07-22T03:50:36.868744+00:00",
@@ -32,7 +32,7 @@
       ]
     },
     "xiang:2498": {
-      "operation_score": -8,
+      "operation_score": -6,
       "operation_label": "續抱觀察",
       "risk_score": 13.0,
       "notified_at": "2026-07-22T03:50:37.689780+00:00",
@@ -40,7 +40,7 @@
       "triggered_rule_ids": []
     },
     "xiang:3003": {
-      "operation_score": 8,
+      "operation_score": 10,
       "operation_label": "續抱觀察",
       "risk_score": 0.0,
       "notified_at": "2026-07-22T03:50:38.914445+00:00",
@@ -48,7 +48,7 @@
       "triggered_rule_ids": []
     },
     "xiang:3019": {
-      "operation_score": 6,
+      "operation_score": 8,
       "operation_label": "續抱觀察",
       "risk_score": 4.0,
       "notified_at": "2026-07-22T03:50:39.733500+00:00",
@@ -56,7 +56,7 @@
       "triggered_rule_ids": []
     },
     "xiang:3029": {
-      "operation_score": 16,
+      "operation_score": 18,
       "operation_label": "輕微加碼傾向",
       "risk_score": 0.0,
       "notified_at": "2026-07-23T03:41:45.611537+00:00",
@@ -66,7 +66,7 @@
       "triggered_rule_ids": []
     },
     "xiang:4566": {
-      "operation_score": 19.0,
+      "operation_score": 21.0,
       "operation_label": "輕微加碼傾向",
       "risk_score": 1.0,
       "notified_at": "2026-07-22T03:50:41.628488+00:00",
@@ -76,7 +76,7 @@
       "triggered_rule_ids": []
     },
     "xiang:6122": {
-      "operation_score": 12,
+      "operation_score": 0,
       "operation_label": "續抱觀察",
       "risk_score": 1.0,
       "notified_at": "2026-07-22T03:50:42.565510+00:00",
@@ -100,10 +100,10 @@
       "triggered_rule_ids": []
     },
     "ou:2303": {
-      "operation_score": 13,
-      "operation_label": "續抱觀察",
+      "operation_score": 15,
+      "operation_label": "輕微加碼傾向",
       "risk_score": 1.0,
-      "notified_at": "2026-07-22T03:50:24.458134+00:00",
+      "notified_at": "2026-07-24T03:20:59.577938+00:00",
       "processed_event_ids": [
         "6ef78c7134c2d6ac16f4",
         "95e1b28fd59378664b6e"
@@ -111,7 +111,7 @@
       "triggered_rule_ids": []
     },
     "ou:2408": {
-      "operation_score": -25,
+      "operation_score": -29,
       "operation_label": "輕微減碼傾向",
       "risk_score": 45.0,
       "notified_at": "2026-07-22T03:50:25.365947+00:00",
@@ -121,7 +121,7 @@
       ]
     },
     "ou:2409": {
-      "operation_score": 3,
+      "operation_score": 5,
       "operation_label": "續抱觀察",
       "risk_score": 5.0,
       "notified_at": "2026-07-22T03:50:26.198776+00:00",
@@ -133,7 +133,7 @@
       "triggered_rule_ids": []
     },
     "ou:2421": {
-      "operation_score": 4,
+      "operation_score": 6,
       "operation_label": "續抱觀察",
       "risk_score": 10.0,
       "notified_at": "2026-07-22T03:50:27.424089+00:00",
@@ -159,7 +159,7 @@
       "triggered_rule_ids": []
     },
     "ou:3653": {
-      "operation_score": 18.0,
+      "operation_score": 20.0,
       "operation_label": "輕微加碼傾向",
       "risk_score": 0.0,
       "notified_at": "2026-07-22T08:47:35.661145+00:00",
@@ -167,7 +167,7 @@
       "triggered_rule_ids": []
     },
     "ou:3665": {
-      "operation_score": 16.0,
+      "operation_score": 18.0,
       "operation_label": "輕微加碼傾向",
       "risk_score": 0.0,
       "notified_at": "2026-07-22T08:47:36.476461+00:00",
@@ -187,7 +187,7 @@
       "triggered_rule_ids": []
     },
     "ou:5269": {
-      "operation_score": 15,
+      "operation_score": 17,
       "operation_label": "輕微加碼傾向",
       "risk_score": 0.0,
       "notified_at": "2026-07-22T08:47:38.266309+00:00",
@@ -195,14 +195,12 @@
       "triggered_rule_ids": []
     },
     "ou:8046": {
-      "operation_score": 12,
-      "operation_label": "續抱觀察",
-      "risk_score": 10.0,
-      "notified_at": "2026-07-22T03:50:34.164412+00:00",
+      "operation_score": 18,
+      "operation_label": "輕微加碼傾向",
+      "risk_score": 0.0,
+      "notified_at": "2026-07-24T03:21:07.782588+00:00",
       "processed_event_ids": [],
-      "triggered_rule_ids": [
-        "holding.profit_watch"
-      ]
+      "triggered_rule_ids": []
     }
   }
 }
