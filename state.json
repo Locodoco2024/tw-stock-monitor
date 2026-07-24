@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-07-24T03:21:15.751727+00:00",
+  "updated_at": "2026-07-24T04:38:47.408090+00:00",
   "records": {
     "xiang:1795": {
       "operation_score": -3,
@@ -18,17 +18,17 @@
       "triggered_rule_ids": []
     },
     "xiang:2409": {
-      "operation_score": -25,
-      "operation_label": "輕微減碼傾向",
-      "risk_score": 35.0,
-      "notified_at": "2026-07-22T03:50:36.868744+00:00",
+      "operation_score": -5,
+      "operation_label": "續抱觀察",
+      "risk_score": 15.0,
+      "notified_at": "2026-07-24T04:38:15.036284+00:00",
       "processed_event_ids": [
         "6e42c23061f3c73c591a",
         "e26b431e25178b2ee3a2",
         "ca513884ed8dc1e9e43f"
       ],
       "triggered_rule_ids": [
-        "holding.profit_take"
+        "holding.profit_watch"
       ]
     },
     "xiang:2498": {
