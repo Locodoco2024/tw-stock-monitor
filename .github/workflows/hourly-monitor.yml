@@ -1,0 +1,93 @@
+name: Hourly stock monitor
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_notify:
+        description: Force current holding profit/loss notification for this run
+        required: false
+        type: boolean
+        default: false
+      institutional_candidates:
+        description: Enable institutional candidate notifications for this run
+        required: false
+        type: boolean
+        default: false
+
+  #schedule:
+    # 台灣時間 09:00～14:30，每 30 分鐘提供一次排程機會。
+    #- cron: "*/30 9-14 * * 1-5"
+    #  timezone: "Asia/Taipei"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hourly-stock-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore state branch
+        shell: bash
+        run: |
+          mkdir -p runtime
+          git fetch origin state || true
+          if git show-ref --verify --quiet refs/remotes/origin/state; then
+            git show origin/state:state.json > runtime/state.json || true
+          fi
+
+      - name: Run monitor
+        env:
+          FUGLE_API_KEY: ${{ secrets.FUGLE_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_WEBHOOKS_JSON: ${{ secrets.DISCORD_WEBHOOKS_JSON }}
+          ENABLE_INSTITUTIONAL_CANDIDATES: ${{ vars.ENABLE_INSTITUTIONAL_CANDIDATES || 'false' }}
+        run: |
+          EXTRA_ARGS=""
+          if [ "${{ inputs.force_notify || false }}" = "true" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --force-notify"
+          fi
+          if [ "${{ inputs.institutional_candidates || false }}" = "true" ] || [ "$ENABLE_INSTITUTIONAL_CANDIDATES" = "true" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --enable-institutional-candidates"
+          fi
+          python -m src.main $EXTRA_ARGS
+
+      - name: Save state branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp runtime/state.json /tmp/stock-monitor-state.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin state || true
+          if git show-ref --verify --quiet refs/remotes/origin/state; then
+            git switch -C state origin/state
+          else
+            git switch --orphan state
+          fi
+          git rm -rf . || true
+          git clean -fdx
+          cp /tmp/stock-monitor-state.json state.json
+          git add state.json
+          git commit -m "Update monitor state [skip ci]" || true
+          git push origin state
