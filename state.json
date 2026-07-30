@@ -1,0 +1,99 @@
+{
+  "updated_at": "2026-07-30T04:25:49.222882+00:00",
+  "records": {
+    "ou:1815": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "ou:2303": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "ou:2408": {
+      "active_profit_thresholds": [
+        30.0,
+        50.0
+      ],
+      "migrated_from_legacy": false
+    },
+    "ou:2409": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "ou:2421": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "ou:3289": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "ou:3587": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "ou:3653": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "ou:3665": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "ou:3707": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "ou:5269": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "ou:8046": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "xiang:1795": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "xiang:2356": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "xiang:2409": {
+      "active_profit_thresholds": [
+        30.0
+      ],
+      "migrated_from_legacy": false
+    },
+    "xiang:2498": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "xiang:3003": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "xiang:3019": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "xiang:3029": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "xiang:4566": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "xiang:6122": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "xiang:8064": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    }
+  },
+  "institutional_notification_keys": {}
+}
