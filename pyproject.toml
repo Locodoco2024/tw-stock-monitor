@@ -39,3 +39,7 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.ruff.lint]
+# Keep CI behavior stable even when Ruff expands its default rule set.
+select = ["E4", "E7", "E9", "F"]
