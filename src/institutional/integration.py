@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import csv
+from datetime import date, datetime
 import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
+from zoneinfo import ZoneInfo
 
 from src.config_loader import institutional_candidates_settings
 from src.models import HoldingMonitorResult, InstitutionalNotification
@@ -66,11 +68,26 @@ def load_institutional_plan(path: str | Path) -> list[InstitutionalNotification]
         missing = required - set(reader.fieldnames or [])
         if missing:
             raise ValueError(f"法人通知計畫缺少欄位：{sorted(missing)}")
+        today = datetime.now(ZoneInfo("Asia/Taipei")).date()
         for raw in reader:
             if not _truthy(raw.get("eligible_for_future_github")):
                 continue
             if not _truthy(raw.get("ready_to_send")):
                 continue
+            valid_until = str(raw.get("plan_valid_until") or "").strip()
+            if valid_until:
+                try:
+                    if date.fromisoformat(valid_until) < today:
+                        LOGGER.warning(
+                            "略過過期法人通知計畫：%s %s",
+                            raw.get("event_id"),
+                            valid_until,
+                        )
+                        continue
+                except ValueError as exc:
+                    raise ValueError(
+                        f"法人通知計畫 plan_valid_until 格式錯誤：{valid_until}"
+                    ) from exc
             trade_action = str(raw.get("trade_action") or "")
             if trade_action != "TRACK_ONLY":
                 raise ValueError(

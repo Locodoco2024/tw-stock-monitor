@@ -22,7 +22,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: hourly-stock-monitor
+  group: stock-monitor-state
   cancel-in-progress: false
 
 jobs:
@@ -48,10 +48,17 @@ jobs:
       - name: Restore state branch
         shell: bash
         run: |
-          mkdir -p runtime
+          set -euo pipefail
+          mkdir -p runtime /tmp/stock-monitor-state
           git fetch origin state || true
           if git show-ref --verify --quiet refs/remotes/origin/state; then
-            git show origin/state:state.json > runtime/state.json || true
+            git archive origin/state | tar -x -C /tmp/stock-monitor-state
+            if [ -f /tmp/stock-monitor-state/state.json ]; then
+              cp /tmp/stock-monitor-state/state.json runtime/state.json
+            fi
+            if [ -d /tmp/stock-monitor-state/institutional ]; then
+              cp -R /tmp/stock-monitor-state/institutional runtime/institutional
+            fi
           fi
 
       - name: Run monitor
@@ -74,10 +81,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp runtime/state.json /tmp/stock-monitor-state.json
+          rm -rf /tmp/stock-monitor-payload
+          mkdir -p /tmp/stock-monitor-payload
+          cp runtime/state.json /tmp/stock-monitor-payload/state.json
+          if [ -d runtime/institutional ]; then
+            cp -R runtime/institutional /tmp/stock-monitor-payload/institutional
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
           git fetch origin state || true
           if git show-ref --verify --quiet refs/remotes/origin/state; then
             git switch -C state origin/state
@@ -86,7 +98,7 @@ jobs:
           fi
           git rm -rf . || true
           git clean -fdx
-          cp /tmp/stock-monitor-state.json state.json
-          git add state.json
+          cp -R /tmp/stock-monitor-payload/. .
+          git add state.json institutional || true
           git commit -m "Update monitor state [skip ci]" || true
           git push origin state

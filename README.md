@@ -44,14 +44,36 @@ institutional_candidates:
 .\scripts\run-offline.ps1
 ```
 
-## 正式執行
+## 持股損益監控
 
 ```bash
 python -m src.main
 ```
 
-啟用法人通知計畫：
+啟用已產生的法人通知計畫：
 
 ```bash
 python -m src.main --enable-institutional-candidates
 ```
+
+## Phase 5H 法人每日管線
+
+第一次在本機用既有 SQLite 建立最近 100 個市場日的部署 seed：
+
+```powershell
+.\scripts\seed-institutional-deployment.ps1
+```
+
+將 seed 發佈至 GitHub 的 `state` branch：
+
+```powershell
+.\scripts\publish-institutional-seed.ps1
+```
+
+之後可在 GitHub Actions 手動執行：
+
+```text
+TPEx institutional daily update
+```
+
+管線使用 TPEx 官方資料，會補齊 seed 與最新日之間缺少的交易日，計算 22 個法人特徵、同日百分位、生命週期及 `runtime/institutional/notification_plan.csv`。第一版盤後 workflow 尚未設定自動排程，法人通知全域開關也仍預設關閉。

@@ -43,8 +43,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--institutional-plan",
-        default="research/output/phase5e_notification_plan.csv",
-        help="Phase 5E 法人通知計畫 CSV",
+        default="runtime/institutional/notification_plan.csv",
+        help="Phase 5H 法人通知計畫 CSV",
     )
     parser.add_argument("--log-level", default="INFO")
     return parser
