@@ -192,6 +192,37 @@ def test_historical_flow_falls_back_to_html_when_json_is_empty() -> None:
     assert session.calls[2]["headers"]["Referer"].endswith("3itrade_hedge.php?l=zh-tw")
 
 
+
+def test_historical_payload_html_cells_are_cleaned_before_merge() -> None:
+    quote_payload = {
+        "aaData": [[
+            '<a href="/stock/7828">7828</a>',
+            '<span class="name">創新服務</span>',
+            "103", "+3", "100", "105", "99",
+            "1,000,000", "50,000,000", "500",
+        ]]
+    }
+    flow_values = [
+        '<a href="/stock/7828">7828</a>',
+        '<span>創新服務</span>',
+        "80", "10", "70", "0", "0", "0",
+        "100", "20", "80", "30", "10", "20",
+        "8", "3", "5", "999", "1", "998",
+    ]
+    session = _PayloadSession([quote_payload, {"aaData": [flow_values]}])
+    client = TpexOpenApiClient(session=session)
+    quotes, flows = client.fetch_date(date(2026, 7, 24))
+    universe = pd.DataFrame(
+        [{"stock_id": "7828", "stock_name": "創新服務", "listing_date": ""}]
+    )
+
+    merged = merge_tpex_daily_rows(quotes, flows, universe)
+
+    assert merged[["date", "stock_id", "stock_name"]].to_dict("records") == [
+        {"date": "2026-07-24", "stock_id": "7828", "stock_name": "創新服務"}
+    ]
+    assert merged.iloc[0]["dealer_self_net"] == 5
+
 def test_merge_tpex_rows_filters_to_seed_universe() -> None:
     universe = pd.DataFrame(
         [

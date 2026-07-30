@@ -4,6 +4,7 @@ import argparse
 import csv
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from html import unescape
 from html.parser import HTMLParser
 import gzip
 import hashlib
@@ -723,6 +724,15 @@ def merge_tpex_daily_rows(
         how="inner",
         validate="one_to_one",
     )
+    if merged.empty:
+        quote_sample = quotes["stock_id"].astype(str).head(5).tolist()
+        flow_sample = flows["stock_id"].astype(str).head(5).tolist()
+        universe_sample = sorted(allowed)[:5]
+        raise RuntimeError(
+            "TPEx 行情與法人資料合併後為0檔；"
+            f"行情代號樣本={quote_sample}、法人代號樣本={flow_sample}、"
+            f"母體代號樣本={universe_sample}"
+        )
     return normalize_rolling_frame(merged)
 
 
@@ -900,7 +910,9 @@ def _historical_flow_html_rows(
 
 
 def _clean_html_cell(value: Any) -> str:
-    return re.sub(r"\s+", " ", str(value or "").replace("\xa0", " ")).strip()
+    text = unescape(str(value or "").replace("\xa0", " "))
+    text = re.sub(r"<[^>]*>", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def _table_rows(fields: Any, data: Any) -> list[dict[str, Any]]:
@@ -1597,7 +1609,7 @@ def _difference_value(
 def _text_value(row: dict[str, Any], *keys: str) -> str:
     value = _first_value(row, keys)
     if value is not None:
-        text = str(value or "").strip()
+        text = _clean_html_cell(value)
         if text:
             return text
     return ""
