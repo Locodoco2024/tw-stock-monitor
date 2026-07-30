@@ -797,22 +797,37 @@ def _historical_flow_payload_rows(
     if isinstance(payload, list):
         rows.extend(_historical_flow_array_rows(payload, trade_date))
     elif isinstance(payload, dict):
+        # TPEx's legacy response may include both field metadata and aaData.
+        # aaData is the authoritative positional layout for this report; parsing
+        # it as a generic field table can create non-empty dictionaries whose
+        # stock-code key is unusable. Always prefer the raw array first.
+        rows.extend(_historical_flow_array_rows(payload.get("aaData"), trade_date))
+
         tables = payload.get("tables")
-        if isinstance(tables, list):
+        if not rows and isinstance(tables, list):
             for table in tables:
                 if not isinstance(table, dict):
                     continue
-                fields = table.get("fields") or table.get("columns")
-                data = table.get("data") or table.get("aaData")
-                rows.extend(_table_rows(fields, data))
-                if not rows:
-                    rows.extend(_historical_flow_array_rows(data, trade_date))
-        if not rows:
-            fields = payload.get("fields") or payload.get("columns")
-            data = payload.get("data") or payload.get("aaData")
-            rows.extend(_table_rows(fields, data))
-            if not rows:
+                rows.extend(
+                    _historical_flow_array_rows(table.get("aaData"), trade_date)
+                )
+                if rows:
+                    break
+                data = table.get("data")
                 rows.extend(_historical_flow_array_rows(data, trade_date))
+                if rows:
+                    break
+                fields = table.get("fields") or table.get("columns")
+                rows.extend(_table_rows(fields, data))
+                if rows:
+                    break
+
+        if not rows:
+            data = payload.get("data")
+            rows.extend(_historical_flow_array_rows(data, trade_date))
+            if not rows:
+                fields = payload.get("fields") or payload.get("columns")
+                rows.extend(_table_rows(fields, data))
     for row in rows:
         if not _date_value(row, "Date", "date", "資料日期"):
             row["Date"] = trade_date.isoformat()
@@ -922,12 +937,23 @@ def _table_rows(fields: Any, data: Any) -> list[dict[str, Any]]:
         return [dict(row) for row in data]
     if not isinstance(fields, list):
         return []
-    names = [str(field) for field in fields]
+    names = [_field_name(field) for field in fields]
     return [
         dict(zip(names, row, strict=False))
         for row in data
         if isinstance(row, list)
     ]
+
+
+def _field_name(field: Any) -> str:
+    if isinstance(field, str):
+        return field
+    if isinstance(field, dict):
+        for key in ("name", "field", "title", "label", "key", "data"):
+            value = field.get(key)
+            if value not in (None, ""):
+                return _clean_html_cell(value)
+    return _clean_html_cell(field)
 
 
 def parse_quote_row(row: dict[str, Any]) -> dict[str, Any]:
@@ -1059,16 +1085,21 @@ def parse_flow_row(row: dict[str, Any]) -> dict[str, Any]:
             "SecuritiesCompanyCode",
             "SecuritiesCode",
             "Code",
+            "Symbol",
+            "symbol",
             "stock_id",
             "證券代號",
+            "代號",
         ),
         "stock_name": _text_value(
             row,
             "CompanyName",
             "SecuritiesCompanyName",
             "Name",
+            "name",
             "stock_name",
             "證券名稱",
+            "名稱",
         ),
         "foreign_net": foreign,
         "investment_trust_net": trust,

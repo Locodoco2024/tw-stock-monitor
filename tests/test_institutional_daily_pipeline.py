@@ -133,6 +133,42 @@ def test_historical_tpex_payload_is_converted_to_canonical_rows() -> None:
     assert flow["selected_total_net"] == 105
 
 
+
+def test_historical_flow_aadata_precedes_unusable_field_metadata() -> None:
+    quote_payload = {
+        "aaData": [[
+            "7828", "創新服務", "103", "+3", "100", "105", "99",
+            "1,000,000", "50,000,000", "500",
+        ]]
+    }
+    flow_values = [
+        "7828", "創新服務",
+        "80", "10", "70", "0", "0", "0",
+        "100", "20", "80", "30", "10", "20",
+        "8", "3", "5", "999", "1", "998",
+        "1007", "4", "1003", "105", "EE",
+    ]
+    # Current TPEx responses can carry metadata together with aaData. The
+    # metadata names are not the canonical API keys, so aaData must retain
+    # priority instead of being converted to unusable dictionaries.
+    flow_payload = {
+        "fields": [{"name": f"column_{index}"} for index in range(len(flow_values))],
+        "aaData": [flow_values],
+    }
+    session = _PayloadSession([quote_payload, flow_payload])
+    client = TpexOpenApiClient(session=session)
+    quotes, flows = client.fetch_date(date(2026, 7, 24))
+    universe = pd.DataFrame(
+        [{"stock_id": "7828", "stock_name": "創新服務", "listing_date": ""}]
+    )
+
+    merged = merge_tpex_daily_rows(quotes, flows, universe)
+
+    assert merged["stock_id"].tolist() == ["7828"]
+    assert merged.iloc[0]["foreign_net"] == 80
+    assert merged.iloc[0]["investment_trust_net"] == 20
+    assert merged.iloc[0]["dealer_self_net"] == 5
+
 def test_historical_flow_tables_payload_is_supported() -> None:
     quote_payload = {
         "aaData": [[
