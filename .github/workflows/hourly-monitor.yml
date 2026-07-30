@@ -15,9 +15,8 @@ on:
         default: false
 
   schedule:
-     台灣時間 09:00～14:30，每 30 分鐘提供一次排程機會。
-    - cron: "*/30 9-14 * * 1-5"
-      timezone: "Asia/Taipei"
+    # UTC 01:00～06:30 = 台灣時間 09:00～14:30
+    - cron: '0,30 1-6 * * 1-5'
 
 permissions:
   contents: write
