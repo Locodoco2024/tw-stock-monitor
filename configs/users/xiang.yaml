@@ -58,7 +58,19 @@ stocks:
   - 50
   - 75
 - symbol: '8064'
-  average_cost: 117.83
+  average_cost: 112.43
+  profit_alerts:
+  - 30
+  - 50
+  - 75
+- symbol: '1815'
+  average_cost: 69.65
+  profit_alerts:
+  - 30
+  - 50
+  - 75
+- symbol: '3481'
+  average_cost: 41.66
   profit_alerts:
   - 30
   - 50

@@ -14,10 +14,10 @@ on:
         type: boolean
         default: false
 
-  #schedule:
-    # 台灣時間 09:00～14:30，每 30 分鐘提供一次排程機會。
-    #- cron: "*/30 9-14 * * 1-5"
-    #  timezone: "Asia/Taipei"
+  schedule:
+     台灣時間 09:00～14:30，每 30 分鐘提供一次排程機會。
+    - cron: "*/30 9-14 * * 1-5"
+      timezone: "Asia/Taipei"
 
 permissions:
   contents: write
