@@ -1,0 +1,13 @@
+{
+  "phase5h_version": "phase5h-v1",
+  "status": "SEEDED",
+  "signal_date": "2026-07-23",
+  "source": "local_sqlite",
+  "model_signature": "2a1ff378e0785990debde3f8836fc7e417412757880f476e4c05e593e06580e1",
+  "rolling_rows": 88971,
+  "universe_stocks": 891,
+  "eligible_stocks": 305,
+  "notification_rows": 1,
+  "generated_at": "2026-07-30T16:20:26+08:00",
+  "ready_to_send": 0
+}
