@@ -4,6 +4,7 @@ import argparse
 import csv
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from html.parser import HTMLParser
 import gzip
 import hashlib
 import json
@@ -39,6 +40,10 @@ HISTORICAL_QUOTE_ENDPOINT = (
 HISTORICAL_FLOW_ENDPOINT = (
     "https://www.tpex.org.tw/web/stock/3insti/daily_trade/"
     "3itrade_hedge_result.php"
+)
+HISTORICAL_FLOW_REFERER = (
+    "https://www.tpex.org.tw/web/stock/3insti/daily_trade/"
+    "3itrade_hedge.php?l=zh-tw"
 )
 ROLLING_COLUMNS = (
     "date",
@@ -154,19 +159,31 @@ class TpexOpenApiClient:
                 "s": "0,asc,0",
             },
         )
+        flow_params = {
+            "l": "zh-tw",
+            "o": "json",
+            "se": "EW",
+            "t": "D",
+            "d": f"{roc_year:03d}/{trade_date:%m/%d}",
+            "s": "0,asc",
+        }
         flow_payload = self._get_payload(
             self.historical_flow_endpoint,
-            params={
-                "l": "zh-tw",
-                "o": "json",
-                "se": "EW",
-                "t": "D",
-                "d": f"{roc_year:03d}/{trade_date:%m/%d}",
-                "s": "0,asc",
-            },
+            params=flow_params,
+            headers={"Referer": HISTORICAL_FLOW_REFERER},
         )
         quote_rows = _historical_quote_payload_rows(quote_payload, trade_date)
         flow_rows = _historical_flow_payload_rows(flow_payload, trade_date)
+        if quote_rows and not flow_rows:
+            LOGGER.warning("TPEx %s 法人 JSON 為空，改讀官方 HTML", trade_date)
+            html_params = dict(flow_params)
+            html_params["o"] = "htm"
+            flow_html = self._get_text(
+                self.historical_flow_endpoint,
+                params=html_params,
+                headers={"Referer": HISTORICAL_FLOW_REFERER},
+            )
+            flow_rows = _historical_flow_html_rows(flow_html, trade_date)
         if bool(quote_rows) != bool(flow_rows):
             raise RuntimeError(
                 f"TPEx {trade_date} 行情與法人歷史資料只有一方有值："
@@ -185,18 +202,44 @@ class TpexOpenApiClient:
         url: str,
         *,
         params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> Any:
+        request_headers = {
+            "Accept": "application/json",
+            "Accept-Language": "zh-TW,zh;q=0.9",
+            "User-Agent": "tw-stock-monitor/phase5h",
+        }
+        request_headers.update(headers or {})
         response = self.session.get(
             url,
             params=params,
             timeout=self.timeout_seconds,
-            headers={
-                "Accept": "application/json",
-                "User-Agent": "tw-stock-monitor/phase5h",
-            },
+            headers=request_headers,
         )
         response.raise_for_status()
         return response.json()
+
+    def _get_text(
+        self,
+        url: str,
+        *,
+        params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> str:
+        request_headers = {
+            "Accept": "text/html,application/xhtml+xml",
+            "Accept-Language": "zh-TW,zh;q=0.9",
+            "User-Agent": "tw-stock-monitor/phase5h",
+        }
+        request_headers.update(headers or {})
+        response = self.session.get(
+            url,
+            params=params,
+            timeout=self.timeout_seconds,
+            headers=request_headers,
+        )
+        response.raise_for_status()
+        return str(response.text)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -740,9 +783,36 @@ def _historical_flow_payload_rows(
     payload: Any,
     trade_date: date,
 ) -> list[dict[str, Any]]:
-    if not isinstance(payload, dict):
-        return []
-    raw_rows = payload.get("aaData") or payload.get("data") or []
+    rows: list[dict[str, Any]] = []
+    if isinstance(payload, list):
+        rows.extend(_historical_flow_array_rows(payload, trade_date))
+    elif isinstance(payload, dict):
+        tables = payload.get("tables")
+        if isinstance(tables, list):
+            for table in tables:
+                if not isinstance(table, dict):
+                    continue
+                fields = table.get("fields") or table.get("columns")
+                data = table.get("data") or table.get("aaData")
+                rows.extend(_table_rows(fields, data))
+                if not rows:
+                    rows.extend(_historical_flow_array_rows(data, trade_date))
+        if not rows:
+            fields = payload.get("fields") or payload.get("columns")
+            data = payload.get("data") or payload.get("aaData")
+            rows.extend(_table_rows(fields, data))
+            if not rows:
+                rows.extend(_historical_flow_array_rows(data, trade_date))
+    for row in rows:
+        if not _date_value(row, "Date", "date", "資料日期"):
+            row["Date"] = trade_date.isoformat()
+    return rows
+
+
+def _historical_flow_array_rows(
+    raw_rows: Any,
+    trade_date: date,
+) -> list[dict[str, Any]]:
     if not isinstance(raw_rows, list):
         return []
     rows: list[dict[str, Any]] = []
@@ -752,27 +822,85 @@ def _historical_flow_payload_rows(
             row.setdefault("Date", trade_date.isoformat())
             rows.append(row)
             continue
-        if not isinstance(raw, list) or len(raw) < 17:
-            continue
-        # TPEx legacy daily table keeps proprietary dealing at columns 14～16.
-        # Hedging columns 17～19 are intentionally not used by this model.
-        rows.append(
-            {
-                "Date": trade_date.isoformat(),
-                "SecuritiesCompanyCode": raw[0],
-                "CompanyName": raw[1],
-                "ForeignInvestorsBuy": raw[8],
-                "ForeignInvestorsSell": raw[9],
-                "ForeignInvestorsDifference": raw[10],
-                "SecuritiesInvestmentTrustCompaniesBuy": raw[11],
-                "SecuritiesInvestmentTrustCompaniesSell": raw[12],
-                "SecuritiesInvestmentTrustCompaniesDifference": raw[13],
-                "DealersSelfBuy": raw[14],
-                "DealersSelfSell": raw[15],
-                "DealersSelfDifference": raw[16],
-            }
-        )
+        row = _historical_flow_array_row(raw, trade_date)
+        if row is not None:
+            rows.append(row)
     return rows
+
+
+def _historical_flow_array_row(
+    raw: Any,
+    trade_date: date,
+) -> dict[str, Any] | None:
+    if not isinstance(raw, list) or len(raw) < 17:
+        return None
+    stock_id = _clean_html_cell(raw[0])
+    if not re.fullmatch(r"[0-9A-Za-z]{4,6}", stock_id):
+        return None
+    # TPEx daily detail keeps proprietary dealing at columns 14～16.
+    # Hedging columns 17～19 are intentionally not used by this model.
+    return {
+        "Date": trade_date.isoformat(),
+        "SecuritiesCompanyCode": stock_id,
+        "CompanyName": _clean_html_cell(raw[1]),
+        "ForeignInvestorsBuy": raw[8],
+        "ForeignInvestorsSell": raw[9],
+        "ForeignInvestorsDifference": raw[10],
+        "SecuritiesInvestmentTrustCompaniesBuy": raw[11],
+        "SecuritiesInvestmentTrustCompaniesSell": raw[12],
+        "SecuritiesInvestmentTrustCompaniesDifference": raw[13],
+        "DealersSelfBuy": raw[14],
+        "DealersSelfSell": raw[15],
+        "DealersSelfDifference": raw[16],
+    }
+
+
+class _TpexTableParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.rows: list[list[str]] = []
+        self._row: list[str] | None = None
+        self._cell: list[str] | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        del attrs
+        if tag.lower() == "tr":
+            self._row = []
+        elif tag.lower() in {"td", "th"} and self._row is not None:
+            self._cell = []
+
+    def handle_data(self, data: str) -> None:
+        if self._cell is not None:
+            self._cell.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        lowered = tag.lower()
+        if lowered in {"td", "th"} and self._row is not None and self._cell is not None:
+            self._row.append(_clean_html_cell("".join(self._cell)))
+            self._cell = None
+        elif lowered == "tr" and self._row is not None:
+            if self._row:
+                self.rows.append(self._row)
+            self._row = None
+            self._cell = None
+
+
+def _historical_flow_html_rows(
+    html_text: str,
+    trade_date: date,
+) -> list[dict[str, Any]]:
+    parser = _TpexTableParser()
+    parser.feed(html_text)
+    rows: list[dict[str, Any]] = []
+    for raw in parser.rows:
+        row = _historical_flow_array_row(raw, trade_date)
+        if row is not None:
+            rows.append(row)
+    return rows
+
+
+def _clean_html_cell(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value or "").replace("\xa0", " ")).strip()
 
 
 def _table_rows(fields: Any, data: Any) -> list[dict[str, Any]]:

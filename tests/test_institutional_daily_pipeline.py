@@ -133,6 +133,65 @@ def test_historical_tpex_payload_is_converted_to_canonical_rows() -> None:
     assert flow["selected_total_net"] == 105
 
 
+def test_historical_flow_tables_payload_is_supported() -> None:
+    quote_payload = {
+        "aaData": [[
+            "7828", "創新服務", "103", "+3", "100", "105", "99",
+            "1,000,000", "50,000,000", "500",
+        ]]
+    }
+    flow_values = [
+        "7828", "創新服務",
+        "80", "10", "70", "0", "0", "0",
+        "100", "20", "80", "30", "10", "20",
+        "8", "3", "5", "999", "1", "998",
+    ]
+    session = _PayloadSession(
+        [quote_payload, {"tables": [{"aaData": [flow_values]}]}]
+    )
+    client = TpexOpenApiClient(session=session)
+
+    _, flows = client.fetch_date(date(2026, 7, 24))
+    flow = parse_flow_row(flows[0])
+
+    assert flow["foreign_net"] == 80
+    assert flow["investment_trust_net"] == 20
+    assert flow["dealer_self_net"] == 5
+    assert session.calls[1]["headers"]["Referer"].endswith("3itrade_hedge.php?l=zh-tw")
+
+
+def test_historical_flow_falls_back_to_html_when_json_is_empty() -> None:
+    quote_payload = {
+        "aaData": [[
+            "7828", "創新服務", "103", "+3", "100", "105", "99",
+            "1,000,000", "50,000,000", "500",
+        ]]
+    }
+    html_values = [
+        "7828", "創新服務",
+        "80", "10", "70", "0", "0", "0",
+        "100", "20", "80", "30", "10", "20",
+        "8", "3", "5", "999", "1", "998",
+        "1007", "4", "1003", "105",
+    ]
+    html_row = "".join(f"<td>{value}</td>" for value in html_values)
+    session = _MixedPayloadSession(
+        [
+            _PayloadResponse(quote_payload),
+            _PayloadResponse({"aaData": []}),
+            _TextResponse(f"<html><table><tr>{html_row}</tr></table></html>"),
+        ]
+    )
+    client = TpexOpenApiClient(session=session)
+
+    _, flows = client.fetch_date(date(2026, 7, 24))
+    flow = parse_flow_row(flows[0])
+
+    assert flow["selected_total_net"] == 105
+    assert session.calls[2]["params"]["o"] == "htm"
+    assert session.calls[2]["headers"]["Referer"].endswith("3itrade_hedge.php?l=zh-tw")
+
+
 def test_merge_tpex_rows_filters_to_seed_universe() -> None:
     universe = pd.DataFrame(
         [
@@ -520,6 +579,24 @@ class _PayloadResponse:
 
     def json(self):
         return self.payload
+
+
+class _TextResponse:
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+    def raise_for_status(self) -> None:
+        return None
+
+
+class _MixedPayloadSession:
+    def __init__(self, responses: list[object]) -> None:
+        self.responses = list(responses)
+        self.calls: list[dict[str, object]] = []
+
+    def get(self, url, **kwargs):
+        self.calls.append({"url": url, **kwargs})
+        return self.responses.pop(0)
 
 
 class _PayloadSession:
