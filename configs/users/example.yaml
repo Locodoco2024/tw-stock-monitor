@@ -1,0 +1,21 @@
+# 一個 YAML 代表一位使用者。
+# 每檔持股只需要：股票代號、平均成本、獲利通知門檻。
+user:
+  id: example
+  enabled: false
+  discord_webhook_key: default
+
+# 可省略；省略時預設接收法人候選與狀態更新。
+# institutional_candidates:
+#   enabled: true
+#   max_new_candidates: 6
+#   include_state_updates: true
+
+stocks:
+  - symbol: "2330"
+    average_cost: 620
+    profit_alerts: [30, 50, 75]
+
+  - symbol: "1815"
+    average_cost: 97.85
+    profit_alerts: [20, 30, 50]

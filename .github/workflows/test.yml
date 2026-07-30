@@ -1,0 +1,46 @@
+name: Tests
+
+on:
+    push:
+        branches:
+            - main
+        paths-ignore:
+            - "configs/users/**"
+
+    pull_request:
+        paths-ignore:
+            - "configs/users/**"
+
+permissions:
+    contents: read
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+                  cache: pip
+
+            - name: Install dependencies
+              run: pip install -r requirements-dev.txt
+
+            - name: Run Ruff
+              run: ruff check src tests
+
+            - name: Run unit tests
+              run: python -m pytest --cov=src --cov-report=term-missing
+
+            - name: Offline end-to-end run
+              run: |
+                  python -m src.main \
+                    --users-config tests/fixtures/test-user.yaml \
+                    --offline-fixture tests/fixtures/holding_quotes.json \
+                    --no-discord \
+                    --state-file runtime/test-state.json

@@ -1,0 +1,65 @@
+user:
+  id: xiang
+  enabled: true
+  discord_webhook_key: default
+stocks:
+- symbol: '1795'
+  average_cost: 197.53
+  profit_alerts:
+  - 30
+  - 50
+  - 75
+- symbol: '2356'
+  average_cost: 51.61
+  profit_alerts:
+  - 30
+  - 50
+  - 75
+- symbol: '2409'
+  average_cost: 17.02
+  profit_alerts:
+  - 30
+  - 50
+  - 75
+- symbol: '2498'
+  average_cost: 46.72
+  profit_alerts:
+  - 30
+  - 50
+  - 75
+- symbol: '3003'
+  average_cost: 63.36
+  profit_alerts:
+  - 30
+  - 50
+  - 75
+- symbol: '3019'
+  average_cost: 138.2
+  profit_alerts:
+  - 30
+  - 50
+  - 75
+- symbol: '3029'
+  average_cost: 103.9
+  profit_alerts:
+  - 30
+  - 50
+  - 75
+- symbol: '4566'
+  average_cost: 63.69
+  profit_alerts:
+  - 30
+  - 50
+  - 75
+- symbol: '6122'
+  average_cost: 48.82
+  profit_alerts:
+  - 30
+  - 50
+  - 75
+- symbol: '8064'
+  average_cost: 117.83
+  profit_alerts:
+  - 30
+  - 50
+  - 75

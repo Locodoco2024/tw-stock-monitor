@@ -1,0 +1,9 @@
+user:
+  id: test
+  enabled: true
+  discord_webhook_key: default
+
+stocks:
+  - symbol: "2330"
+    average_cost: 620
+    profit_alerts: [30, 50, 75]
