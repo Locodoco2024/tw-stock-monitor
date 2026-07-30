@@ -32,7 +32,10 @@ QUOTE_ENDPOINT = (
     "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes"
 )
 FLOW_ENDPOINT = "https://www.tpex.org.tw/openapi/v1/tpex_3insti_daily_trading"
-HISTORICAL_QUOTE_ENDPOINT = "https://www.tpex.org.tw/www/zh-tw/afterTrading/dailyQuotes"
+HISTORICAL_QUOTE_ENDPOINT = (
+    "https://www.tpex.org.tw/web/stock/aftertrading/otc_quotes_no1430/"
+    "stk_wn1430_result.php"
+)
 HISTORICAL_FLOW_ENDPOINT = (
     "https://www.tpex.org.tw/web/stock/3insti/daily_trade/"
     "3itrade_hedge_result.php"
@@ -140,14 +143,17 @@ class TpexOpenApiClient:
         self,
         trade_date: date,
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        roc_year = trade_date.year - 1911
         quote_payload = self._get_payload(
             self.historical_quote_endpoint,
             params={
-                "date": trade_date.strftime("%Y/%m/%d"),
-                "response": "json",
+                "l": "zh-tw",
+                "o": "json",
+                "d": f"{roc_year:03d}/{trade_date:%m/%d}",
+                "se": "EW",
+                "s": "0,asc,0",
             },
         )
-        roc_year = trade_date.year - 1911
         flow_payload = self._get_payload(
             self.historical_flow_endpoint,
             params={
@@ -163,7 +169,8 @@ class TpexOpenApiClient:
         flow_rows = _historical_flow_payload_rows(flow_payload, trade_date)
         if bool(quote_rows) != bool(flow_rows):
             raise RuntimeError(
-                f"TPEx {trade_date} 行情與法人歷史資料只有一方有值，拒絕補資料"
+                f"TPEx {trade_date} 行情與法人歷史資料只有一方有值："
+                f"行情={len(quote_rows)}、法人={len(flow_rows)}，拒絕補資料"
             )
         return quote_rows, flow_rows
 
@@ -696,6 +703,31 @@ def _historical_quote_payload_rows(
             fields = payload.get("fields") or payload.get("columns")
             data = payload.get("data") or payload.get("aaData")
             rows.extend(_table_rows(fields, data))
+        if not rows:
+            raw_rows = payload.get("aaData") or payload.get("data") or []
+            if isinstance(raw_rows, list):
+                for raw in raw_rows:
+                    if isinstance(raw, dict):
+                        rows.append(dict(raw))
+                        continue
+                    if not isinstance(raw, list) or len(raw) < 10:
+                        continue
+                    # TPEx historical OTC quote result columns:
+                    # code, name, close, change, open, high, low,
+                    # volume, amount, transaction count, ...
+                    rows.append(
+                        {
+                            "Date": trade_date.isoformat(),
+                            "SecuritiesCompanyCode": raw[0],
+                            "CompanyName": raw[1],
+                            "Close": raw[2],
+                            "Open": raw[4],
+                            "High": raw[5],
+                            "Low": raw[6],
+                            "TradingShares": raw[7],
+                            "TransactionAmount": raw[8],
+                        }
+                    )
     else:
         rows = []
     for row in rows:

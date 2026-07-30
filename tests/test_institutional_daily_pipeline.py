@@ -96,14 +96,12 @@ def test_normalize_rolling_frame_accepts_sqlite_timestamps() -> None:
 
 def test_historical_tpex_payload_is_converted_to_canonical_rows() -> None:
     quote_payload = {
-        "tables": [
-            {
-                "fields": [
-                    "代號", "名稱", "收盤價", "開盤價", "最高價", "最低價",
-                    "成交股數(千股)", "成交金額(千元)",
-                ],
-                "data": [["7828", "創新服務", "103", "100", "105", "99", "1,000", "50,000"]],
-            }
+        "aaData": [
+            [
+                "7828", "創新服務", "103", "+3", "100", "105", "99",
+                "1,000,000", "50,000,000", "500", "", "", "", "",
+                "100,000,000", "113", "93",
+            ]
         ]
     }
     flow_values = [
@@ -126,6 +124,9 @@ def test_historical_tpex_payload_is_converted_to_canonical_rows() -> None:
     assert quote["date"] == "2026-07-29"
     assert quote["trading_volume"] == 1_000_000
     assert quote["trading_money"] == 50_000_000
+    quote_call = session.calls[0]
+    assert quote_call["params"]["d"] == "115/07/29"
+    assert quote_call["params"]["se"] == "EW"
     assert flow["foreign_net"] == 80
     assert flow["investment_trust_net"] == 20
     assert flow["dealer_self_net"] == 5
@@ -524,8 +525,10 @@ class _PayloadResponse:
 class _PayloadSession:
     def __init__(self, payloads: list[object]) -> None:
         self.payloads = list(payloads)
+        self.calls: list[dict[str, object]] = []
 
-    def get(self, *_args, **_kwargs):
+    def get(self, url, **kwargs):
+        self.calls.append({"url": url, **kwargs})
         return _PayloadResponse(self.payloads.pop(0))
 
 
