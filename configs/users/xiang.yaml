@@ -1,6 +1,8 @@
 user:
   id: xiang
   enabled: true
+  max_new_candidates: 6
+  include_state_updates: true
   discord_webhook_key: default
 stocks:
 - symbol: '1795'
