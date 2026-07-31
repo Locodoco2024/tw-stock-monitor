@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-07-31T01:15:47.382363+00:00",
+  "updated_at": "2026-07-31T01:20:09.984013+00:00",
   "records": {
     "ou:1815": {
       "active_profit_thresholds": [],
@@ -103,5 +103,9 @@
       "migrated_from_legacy": false
     }
   },
-  "institutional_notification_keys": {}
+  "institutional_notification_keys": {
+    "xiang": [
+      "xiang|P5H-3363-2026-07-30|LAYOUT_CONFIRMED_DIRECT|2026-07-30"
+    ]
+  }
 }
