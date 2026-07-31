@@ -1,9 +1,13 @@
 user:
   id: xiang
   enabled: true
+  discord_webhook_key: default
+
+institutional_candidates:
+  enabled: false
   max_new_candidates: 6
   include_state_updates: true
-  discord_webhook_key: default
+  
 stocks:
 - symbol: '1795'
   average_cost: 197.53
