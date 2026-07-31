@@ -70,6 +70,10 @@ from research.institutional_model.phase5_final_model import (
     Phase5DSettings,
     run_phase5d_final_model,
 )
+from research.institutional_model.phase5_entry_risk import (
+    Phase5ISettings,
+    run_phase5i_entry_risk_research,
+)
 from research.institutional_model.self_check import run_self_check
 from research.institutional_model.universe import (
     compare_with_current_holdings,
@@ -88,7 +92,7 @@ PHASE2_COMMANDS = {
 }
 PHASE3_COMMANDS = {"phase3", "phase3-audit", "phase3-label-repair"}
 PHASE4_COMMANDS = {"phase4a", "phase4b", "phase4c", "phase4d", "phase4e", "phase4f"}
-PHASE5_COMMANDS = {"phase5a", "phase5b", "phase5d"}
+PHASE5_COMMANDS = {"phase5a", "phase5b", "phase5d", "phase5i"}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -118,6 +122,7 @@ def build_parser() -> argparse.ArgumentParser:
             "phase5a",
             "phase5b",
             "phase5d",
+            "phase5i",
         ),
     )
     parser.add_argument("--start-date")
@@ -369,6 +374,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=3,
         help="Phase 5D bootstrap 移動區塊月份",
     )
+    parser.add_argument(
+        "--phase5i-min-proxy-events",
+        type=int,
+        default=100,
+        help="Phase 5I 每個成本代理進行確認期判斷所需最低事件數",
+    )
+    parser.add_argument(
+        "--phase5i-bootstrap-iterations",
+        type=int,
+        default=1_000,
+        help="Phase 5I 高低成本偏離分組 bootstrap 次數",
+    )
+    parser.add_argument(
+        "--phase5i-bootstrap-block-months",
+        type=int,
+        default=3,
+        help="Phase 5I bootstrap 移動區塊月份",
+    )
     return parser
 
 
@@ -438,6 +461,9 @@ def main() -> None:
         return
     if args.command == "phase5d":
         _run_phase5d(args, settings)
+        return
+    if args.command == "phase5i":
+        _run_phase5i(args, settings, database)
         return
 
     _run_phase3(args, settings, database)
@@ -1166,6 +1192,30 @@ def _run_phase5d(
     )
     _print_paths(list(result.output_paths))
 
+
+
+def _run_phase5i(
+    args: argparse.Namespace,
+    settings: ResearchSettings,
+    database: ResearchDatabase,
+) -> None:
+    phase5i_settings = Phase5ISettings(
+        minimum_proxy_events=args.phase5i_min_proxy_events,
+        bootstrap_iterations=args.phase5i_bootstrap_iterations,
+        bootstrap_block_months=args.phase5i_bootstrap_block_months,
+    )
+    result = run_phase5i_entry_risk_research(
+        database=database,
+        output_dir=settings.output_dir,
+        shard_root=settings.database_path.parent / "phase3_shards",
+        settings=phase5i_settings,
+    )
+    print(
+        "Phase 5I 法人推估成本帶與追價風險驗證完成："
+        f"狀態 {result.status}、正式事件 {result.source_events:,}、"
+        f"完成成本特徵 {result.enriched_events:,}"
+    )
+    _print_paths(list(result.output_paths))
 
 def _run_phase3_audit(
     args: argparse.Namespace,

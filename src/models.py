@@ -69,6 +69,13 @@ class InstitutionalNotification:
     negative_factors: str
     is_configured_stock: bool
     trade_action: str = "TRACK_ONLY"
+    estimated_cost_window_days: int | None = None
+    estimated_cost_low: float | None = None
+    estimated_cost_mid: float | None = None
+    estimated_cost_high: float | None = None
+    estimated_cost_buy_days: int | None = None
+    signal_close: float | None = None
+    signal_deviation_pct: float | None = None
 
     @property
     def state_key(self) -> str:

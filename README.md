@@ -77,3 +77,15 @@ TPEx institutional daily update
 ```
 
 管線使用 TPEx 官方資料，會補齊 seed 與最新日之間缺少的交易日，計算 22 個法人特徵、同日百分位、生命週期及 `runtime/institutional/notification_plan.csv`。第一版盤後 workflow 尚未設定自動排程，法人通知全域開關也仍預設關閉。
+
+## Phase 5I 本機追價風險研究
+
+```powershell
+.\scripts\run-institutional-phase5i.ps1
+```
+
+Phase 5I 研究法人候選的近期淨買超推估成本帶及進場價偏離，不會修改目前 Discord 通知。推估成本不是法人真實持倉成本；詳細限制見 `PHASE5I_UPDATE.md`。
+
+## Phase 5J 法人推估成本資訊
+
+法人 Discord 通知會額外顯示三法人合計近 20 日推估成本帶、中間值、訊號日收盤價、相對偏離及淨買超日數。推估成本沿用 Phase 5I 定義，只供使用者自行判斷，不是法人真實持倉成本，也不產生買賣建議。詳細規格見 `PHASE5J_UPDATE.md`。

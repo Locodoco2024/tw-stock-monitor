@@ -30,6 +30,7 @@ TAIPEI = ZoneInfo("Asia/Taipei")
 DEFAULT_STATE_DIR = Path("runtime/institutional")
 DEFAULT_MODEL_DIR = Path("models/tpex")
 DEFAULT_DATABASE = Path("research/data/institutional_phase1.sqlite")
+ESTIMATED_COST_WINDOW_DAYS = 20
 QUOTE_ENDPOINT = (
     "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes"
 )
@@ -1155,9 +1156,14 @@ def rebuild_outputs(
         latest_notifications = latest_notifications[
             latest_notifications["signal_date"] == latest_date
         ].copy()
+    cost_reference = build_estimated_cost_reference(
+        rolling,
+        window=ESTIMATED_COST_WINDOW_DAYS,
+    )
     plan = build_notification_plan(
         notifications=latest_notifications,
         latest_scores=latest_scores,
+        cost_reference=cost_reference,
         user_configs=user_configs,
         ready_to_send=ready_to_send,
         generated_reason=generated_reason,
@@ -1434,10 +1440,91 @@ def replay_lifecycle(scores: pd.DataFrame) -> dict[str, pd.DataFrame]:
     return {"events": event_frame, "notifications": notification_frame}
 
 
+def build_estimated_cost_reference(
+    rolling: pd.DataFrame,
+    *,
+    window: int = ESTIMATED_COST_WINDOW_DAYS,
+) -> pd.DataFrame:
+    """建立三法人合計正淨買超的近期推估成本帶。
+
+    計算定義與 Phase 5I 相同：只取近 ``window`` 個市場交易日中
+    ``selected_total_net > 0`` 的日期，以正淨買超股數加權當日低價、
+    典型價與高價。這是公開資料的價格代理，不是真實法人庫存成本。
+    """
+    if window < 2:
+        raise ValueError("推估成本窗口不可小於 2 個交易日")
+    required = {
+        "date",
+        "stock_id",
+        "high",
+        "low",
+        "close",
+        "selected_total_net",
+    }
+    missing = sorted(required.difference(rolling.columns))
+    if missing:
+        raise ValueError(f"推估成本資料缺少欄位：{missing}")
+
+    base = rolling[
+        ["date", "stock_id", "high", "low", "close", "selected_total_net"]
+    ].copy()
+    base["date"] = base["date"].astype(str).map(_normalize_date_text)
+    base["stock_id"] = base["stock_id"].astype(str).str.strip()
+    for column in ("high", "low", "close", "selected_total_net"):
+        base[column] = pd.to_numeric(base[column], errors="coerce")
+    base = base[(base["date"] != "") & (base["stock_id"] != "")]
+    base = base.sort_values(["stock_id", "date"], kind="stable").reset_index(drop=True)
+    base["typical_price"] = (base["high"] + base["low"] + base["close"]) / 3.0
+
+    positive = base["selected_total_net"].clip(lower=0).fillna(0.0)
+    group_key = base["stock_id"]
+    weight_sum = positive.groupby(group_key, sort=False).transform(
+        lambda values: values.rolling(window, min_periods=window).sum()
+    )
+    buy_days = (positive > 0).astype(int).groupby(group_key, sort=False).transform(
+        lambda values: values.rolling(window, min_periods=window).sum()
+    )
+
+    base["estimated_cost_window_days"] = window
+    base["estimated_cost_positive_net_shares"] = weight_sum
+    base["estimated_cost_buy_days"] = buy_days
+    for output, source in (
+        ("estimated_cost_low", "low"),
+        ("estimated_cost_mid", "typical_price"),
+        ("estimated_cost_high", "high"),
+    ):
+        weighted_sum = (positive * base[source]).groupby(group_key, sort=False).transform(
+            lambda values: values.rolling(window, min_periods=window).sum()
+        )
+        base[output] = np.where(weight_sum > 0, weighted_sum / weight_sum, np.nan)
+
+    base["signal_close"] = base["close"]
+    base["signal_deviation_pct"] = np.where(
+        base["estimated_cost_mid"] > 0,
+        (base["signal_close"] / base["estimated_cost_mid"] - 1.0) * 100.0,
+        np.nan,
+    )
+    base["signal_date"] = base["date"]
+    return base[
+        [
+            "stock_id",
+            "signal_date",
+            "estimated_cost_window_days",
+            "estimated_cost_low",
+            "estimated_cost_mid",
+            "estimated_cost_high",
+            "estimated_cost_buy_days",
+            "estimated_cost_positive_net_shares",
+            "signal_close",
+            "signal_deviation_pct",
+        ]
+    ].drop_duplicates(["stock_id", "signal_date"], keep="last")
+
 def build_notification_plan(
     *,
     notifications: pd.DataFrame,
     latest_scores: pd.DataFrame,
+    cost_reference: pd.DataFrame | None = None,
     user_configs: list[dict[str, Any]],
     ready_to_send: bool,
     generated_reason: str,
@@ -1446,12 +1533,31 @@ def build_notification_plan(
         "user_id", "stock_id", "stock_name", "signal_date", "event_id",
         "notification_type", "notify_mode", "eligible_for_future_github",
         "ready_to_send", "trade_action", "percentile", "event_age_days",
-        "reason", "positive_factors", "negative_factors", "is_configured_stock",
+        "reason", "positive_factors", "negative_factors",
+        "estimated_cost_window_days", "estimated_cost_low", "estimated_cost_mid",
+        "estimated_cost_high", "estimated_cost_buy_days", "signal_close",
+        "signal_deviation_pct", "is_configured_stock",
         "generated_at", "generated_reason", "plan_valid_until",
     ]
     if notifications.empty:
         return pd.DataFrame(columns=columns)
     latest_lookup = latest_scores.set_index("stock_id", drop=False)
+    cost_lookup: pd.DataFrame | None = None
+    if cost_reference is not None and not cost_reference.empty:
+        required_cost_columns = {"stock_id", "signal_date"}
+        missing_cost_columns = sorted(
+            required_cost_columns.difference(cost_reference.columns)
+        )
+        if missing_cost_columns:
+            raise ValueError(
+                f"法人推估成本參考缺少欄位：{missing_cost_columns}"
+            )
+        cost_lookup = cost_reference.copy()
+        cost_lookup["stock_id"] = cost_lookup["stock_id"].astype(str)
+        cost_lookup["signal_date"] = cost_lookup["signal_date"].astype(str)
+        if cost_lookup.duplicated(["stock_id", "signal_date"]).any():
+            raise ValueError("法人推估成本參考含重複 stock_id/signal_date")
+        cost_lookup = cost_lookup.set_index(["stock_id", "signal_date"], drop=False)
     rows: list[dict[str, Any]] = []
     generated_at = datetime.now(TAIPEI).isoformat(timespec="seconds")
     for config in user_configs:
@@ -1461,6 +1567,11 @@ def build_notification_plan(
             stock_id = str(notification["stock_id"])
             score_row = latest_lookup.loc[stock_id] if stock_id in latest_lookup.index else None
             signal_date = str(notification["signal_date"])
+            cost_row = (
+                cost_lookup.loc[(stock_id, signal_date)]
+                if cost_lookup is not None and (stock_id, signal_date) in cost_lookup.index
+                else None
+            )
             rows.append(
                 {
                     "user_id": user_id,
@@ -1488,6 +1599,25 @@ def build_notification_plan(
                     "reason": str(notification["reason"]),
                     "positive_factors": str(score_row["positive_factors"]) if score_row is not None else "",
                     "negative_factors": str(score_row["negative_factors"]) if score_row is not None else "",
+                    "estimated_cost_window_days": _finite_value(
+                        cost_row, "estimated_cost_window_days"
+                    ),
+                    "estimated_cost_low": _finite_value(
+                        cost_row, "estimated_cost_low"
+                    ),
+                    "estimated_cost_mid": _finite_value(
+                        cost_row, "estimated_cost_mid"
+                    ),
+                    "estimated_cost_high": _finite_value(
+                        cost_row, "estimated_cost_high"
+                    ),
+                    "estimated_cost_buy_days": _finite_value(
+                        cost_row, "estimated_cost_buy_days"
+                    ),
+                    "signal_close": _finite_value(cost_row, "signal_close"),
+                    "signal_deviation_pct": _finite_value(
+                        cost_row, "signal_deviation_pct"
+                    ),
                     "is_configured_stock": int(stock_id in configured),
                     "generated_at": generated_at,
                     "generated_reason": generated_reason,
@@ -1496,6 +1626,16 @@ def build_notification_plan(
             )
     return pd.DataFrame(rows, columns=columns)
 
+
+def _finite_value(row: pd.Series | None, column: str) -> float | int | None:
+    if row is None or column not in row.index:
+        return None
+    value = pd.to_numeric(row[column], errors="coerce")
+    if pd.isna(value) or not math.isfinite(float(value)):
+        return None
+    if column in {"estimated_cost_window_days", "estimated_cost_buy_days"}:
+        return int(value)
+    return float(value)
 
 def write_manifest(state_dir: Path, payload: dict[str, Any]) -> None:
     target = state_dir / "update_manifest.json"

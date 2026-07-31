@@ -7,8 +7,10 @@ import sqlite3
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from src.institutional.daily_pipeline import (
+    build_estimated_cost_reference,
     build_notification_plan,
     create_seed,
     load_deploy_model,
@@ -309,6 +311,86 @@ def test_lifecycle_merges_confirmation_and_day20_extension() -> None:
         "LAYOUT_CONFIRMED_AND_EXTENDED"
     ]
 
+
+
+def test_estimated_cost_reference_matches_phase5i_definition() -> None:
+    start = date(2026, 6, 1)
+    rows = []
+    for index in range(20):
+        row = {
+            "date": (start + timedelta(days=index)).isoformat(),
+            "stock_id": "1001",
+            "high": 15,
+            "low": 13,
+            "close": 14,
+            "selected_total_net": 0,
+        }
+        if index == 0:
+            row.update({"high": 11, "low": 9, "close": 10, "selected_total_net": 100})
+        if index == 19:
+            row.update({"high": 22, "low": 18, "close": 20, "selected_total_net": 300})
+        rows.append(row)
+
+    reference = build_estimated_cost_reference(pd.DataFrame(rows), window=20)
+    latest = reference.iloc[-1]
+
+    assert latest["estimated_cost_low"] == 15.75
+    assert latest["estimated_cost_mid"] == 17.5
+    assert latest["estimated_cost_high"] == 19.25
+    assert latest["estimated_cost_buy_days"] == 2
+    assert latest["signal_close"] == 20
+    assert latest["signal_deviation_pct"] == pytest.approx(14.285714)
+
+
+def test_notification_plan_carries_estimated_cost_without_judgement() -> None:
+    notifications = pd.DataFrame(
+        [
+            {
+                "event_id": "P5H-1001-2026-07-29",
+                "stock_id": "1001",
+                "stock_name": "甲",
+                "signal_date": "2026-07-29",
+                "notification_type": "NEW_CANDIDATE",
+                "percentile": 95.0,
+                "event_age_days": 0,
+                "reason": "new",
+            }
+        ]
+    )
+    latest_scores = pd.DataFrame(
+        [{"stock_id": "1001", "positive_factors": "正向", "negative_factors": "負向"}]
+    )
+    cost_reference = pd.DataFrame(
+        [
+            {
+                "stock_id": "1001",
+                "signal_date": "2026-07-29",
+                "estimated_cost_window_days": 20,
+                "estimated_cost_low": 95.0,
+                "estimated_cost_mid": 100.0,
+                "estimated_cost_high": 105.0,
+                "estimated_cost_buy_days": 8,
+                "signal_close": 110.0,
+                "signal_deviation_pct": 10.0,
+            }
+        ]
+    )
+
+    plan = build_notification_plan(
+        notifications=notifications,
+        latest_scores=latest_scores,
+        cost_reference=cost_reference,
+        user_configs=[{"user": {"id": "u1"}, "stocks": []}],
+        ready_to_send=True,
+        generated_reason="test",
+    )
+    row = plan.iloc[0]
+
+    assert row["estimated_cost_mid"] == 100.0
+    assert row["estimated_cost_buy_days"] == 8
+    assert row["signal_close"] == 110.0
+    assert row["signal_deviation_pct"] == 10.0
+    assert "risk" not in " ".join(plan.columns).lower()
 
 def test_notification_plan_marks_end_states_as_silent() -> None:
     notifications = pd.DataFrame(

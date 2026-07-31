@@ -103,6 +103,64 @@ class DiscordNotifier:
                     "inline": True,
                 }
             )
+        if notification.estimated_cost_window_days is not None:
+            window = notification.estimated_cost_window_days
+            if notification.estimated_cost_mid is None:
+                fields.append(
+                    {
+                        "name": f"三法人近{window}日推估成本帶",
+                        "value": "無法估算（期間內沒有三法人合計正淨買超）",
+                        "inline": False,
+                    }
+                )
+            else:
+                if (
+                    notification.estimated_cost_low is not None
+                    and notification.estimated_cost_high is not None
+                ):
+                    fields.append(
+                        {
+                            "name": f"三法人近{window}日推估成本帶",
+                            "value": (
+                                f"{_price_text(notification.estimated_cost_low)} ～ "
+                                f"{_price_text(notification.estimated_cost_high)}"
+                            ),
+                            "inline": True,
+                        }
+                    )
+                fields.append(
+                    {
+                        "name": "推估成本中間值",
+                        "value": _price_text(notification.estimated_cost_mid),
+                        "inline": True,
+                    }
+                )
+                if notification.signal_deviation_pct is not None:
+                    fields.append(
+                        {
+                            "name": "收盤價相對推估成本",
+                            "value": f"{notification.signal_deviation_pct:+.1f}%",
+                            "inline": True,
+                        }
+                    )
+            if notification.signal_close is not None:
+                fields.append(
+                    {
+                        "name": "訊號日收盤價",
+                        "value": _price_text(notification.signal_close),
+                        "inline": True,
+                    }
+                )
+            if notification.estimated_cost_buy_days is not None:
+                fields.append(
+                    {
+                        "name": "三法人淨買超日數",
+                        "value": (
+                            f"{notification.estimated_cost_buy_days}／{window} 個交易日"
+                        ),
+                        "inline": True,
+                    }
+                )
         if holding is not None:
             if holding.quote is not None:
                 fields.append(
@@ -140,13 +198,20 @@ class DiscordNotifier:
             "description": notification.reason or status_text,
             "fields": fields,
             "footer": {
-                "text": "法人分數是 TPEx 同日相對排序，不是上漲機率或買賣建議"
+                "text": (
+                    "法人分數是 TPEx 同日相對排序；推估成本以近20日三法人合計"
+                    "正淨買超股數加權日內典型價計算，非真實持倉成本；"
+                    "僅供自行判斷，不是買賣建議"
+                )
             },
         }
         if holding is not None:
             embed["timestamp"] = holding.analyzed_at
         self.http.post_json(webhook_url, payload={"embeds": [embed]})
 
+
+def _price_text(value: float) -> str:
+    return f"{value:,.2f}".rstrip("0").rstrip(".")
 
 def _institutional_status(notification_type: str) -> tuple[str, str]:
     mapping = {

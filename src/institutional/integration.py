@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 from datetime import date, datetime
 import logging
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -109,6 +110,19 @@ def load_institutional_plan(path: str | Path) -> list[InstitutionalNotification]
                     negative_factors=str(raw.get("negative_factors") or ""),
                     is_configured_stock=_truthy(raw.get("is_configured_stock")),
                     trade_action=trade_action,
+                    estimated_cost_window_days=_int_or_none(
+                        raw.get("estimated_cost_window_days")
+                    ),
+                    estimated_cost_low=_float_or_none(raw.get("estimated_cost_low")),
+                    estimated_cost_mid=_float_or_none(raw.get("estimated_cost_mid")),
+                    estimated_cost_high=_float_or_none(raw.get("estimated_cost_high")),
+                    estimated_cost_buy_days=_int_or_none(
+                        raw.get("estimated_cost_buy_days")
+                    ),
+                    signal_close=_float_or_none(raw.get("signal_close")),
+                    signal_deviation_pct=_float_or_none(
+                        raw.get("signal_deviation_pct")
+                    ),
                 )
             )
 
@@ -230,9 +244,10 @@ def _float_or_none(value: object) -> float | None:
     if not text:
         return None
     try:
-        return float(text)
+        number = float(text)
     except ValueError:
         return None
+    return number if math.isfinite(number) else None
 
 
 def _int_or_none(value: object) -> int | None:

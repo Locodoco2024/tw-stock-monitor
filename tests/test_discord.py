@@ -68,6 +68,13 @@ def test_institutional_message_adds_holding_profit_without_old_score() -> None:
         positive_factors="投信近20日買超日比例",
         negative_factors="外資近20日流量",
         is_configured_stock=True,
+        estimated_cost_window_days=20,
+        estimated_cost_low=120.25,
+        estimated_cost_mid=125.5,
+        estimated_cost_high=130.75,
+        estimated_cost_buy_days=9,
+        signal_close=134.0,
+        signal_deviation_pct=6.7729,
     )
     DiscordNotifier(http=http).send_institutional(
         notification,
@@ -80,5 +87,52 @@ def test_institutional_message_adds_holding_profit_without_old_score() -> None:
     }
     assert fields["法人狀態"] == "法人連續布局確認"
     assert fields["目前損益"] == "+50.0%"
+    assert fields["三法人近20日推估成本帶"] == "120.25 ～ 130.75"
+    assert fields["推估成本中間值"] == "125.5"
+    assert fields["訊號日收盤價"] == "134"
+    assert fields["收盤價相對推估成本"] == "+6.8%"
+    assert fields["三法人淨買超日數"] == "9／20 個交易日"
+    assert "非真實持倉成本" in http.payload["embeds"][0]["footer"]["text"]
+    serialized = str(http.payload)
+    assert "魚尾" not in serialized
+    assert "追價風險" not in serialized
     assert "原模型判斷" not in fields
     assert "原方向分數" not in fields
+
+def test_institutional_message_explains_when_cost_cannot_be_estimated() -> None:
+    http = FakeHttp()
+    notification = InstitutionalNotification(
+        user_id="test",
+        symbol="7828",
+        name="創新服務",
+        signal_date="2026-07-30",
+        event_id="P5H-7828-2026-07-30",
+        notification_type="NEW_CANDIDATE",
+        notify_mode="NEW_CANDIDATE",
+        percentile=92.0,
+        event_age_days=0,
+        reason="法人排名首次進入同日TPEx前10%",
+        positive_factors="投信近20日買超日比例",
+        negative_factors="",
+        is_configured_stock=False,
+        estimated_cost_window_days=20,
+        estimated_cost_buy_days=0,
+        signal_close=88.5,
+    )
+
+    DiscordNotifier(http=http).send_institutional(
+        notification,
+        "https://example.invalid/webhook",
+    )
+    fields = {
+        field["name"]: field["value"]
+        for field in http.payload["embeds"][0]["fields"]
+    }
+
+    assert fields["三法人近20日推估成本帶"] == (
+        "無法估算（期間內沒有三法人合計正淨買超）"
+    )
+    assert fields["訊號日收盤價"] == "88.5"
+    assert fields["三法人淨買超日數"] == "0／20 個交易日"
+    assert "收盤價相對推估成本" not in fields
+

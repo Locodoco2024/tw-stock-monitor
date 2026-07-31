@@ -614,3 +614,13 @@ Phase 5D 固定採用 Phase 4E 勝出的 TPEx 20 日 `return_rank_score`，以�
 - 結束後 20 個交易日冷卻
 
 完整方法、輸出與限制見根目錄 `PHASE5D_UPDATE.md`。
+
+## Phase 5I：法人推估成本帶與追價風險
+
+Phase 5I 使用 Phase 4F 的正式樣本外事件，將進場價與外資、投信、自營商自行買賣及三法人合計的 5／10／20 日淨買超加權推估成本帶比較，驗證價格偏離是否與後續報酬及最大回撤有關。
+
+```powershell
+.\scripts\run-institutional-phase5i.ps1
+```
+
+推估成本只使用訊號日及以前的正淨買超資料；下一交易日開盤是實際決策價。此階段只產研究報告，不修改正式通知。完整規格見根目錄 `PHASE5I_UPDATE.md`。
