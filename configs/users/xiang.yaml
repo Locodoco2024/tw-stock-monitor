@@ -4,10 +4,10 @@ user:
   discord_webhook_key: default
 
 institutional_candidates:
-  enabled: false
+  enabled: true
   max_new_candidates: 6
   include_state_updates: true
-  
+
 stocks:
 - symbol: '1795'
   average_cost: 197.53
