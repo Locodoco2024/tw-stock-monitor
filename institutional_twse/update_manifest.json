@@ -1,0 +1,13 @@
+{
+  "phase6d_version": "phase6d-v1",
+  "status": "SEEDED",
+  "market": "twse",
+  "signal_date": "2026-07-23",
+  "model_signature": "2712388a500d6bffc146c6924df1e733ed8565556e3d9ea140751ebe948c851c",
+  "rolling_rows": 128424,
+  "universe_stocks": 1081,
+  "eligible_stocks": 378,
+  "notification_rows": 1,
+  "ready_to_send": 0,
+  "generated_at": "2026-08-03T09:31:29+08:00"
+}
