@@ -624,3 +624,26 @@ Phase 5I 使用 Phase 4F 的正式樣本外事件，將進場價與外資、投�
 ```
 
 推估成本只使用訊號日及以前的正淨買超資料；下一交易日開盤是實際決策價。此階段只產研究報告，不修改正式通知。完整規格見根目錄 `PHASE5I_UPDATE.md`。
+
+## TWSE 上市法人模型訓練
+
+TWSE 不直接沿用 TPEx 已部署模型。執行：
+
+```powershell
+.\scripts\run-institutional-twse-training.ps1
+```
+
+流程使用既有 Phase 3 TWSE 分片，依序完成 10／20／40 日期限研究、20 日 return-rank 樣本外驗證、生命週期驗證與最終模型訓練。TWSE 驗證若未通過，流程會在 Phase 4E 後停止，不產生可部署模型。
+
+輸出位於：
+
+```text
+research/output/twse/
+```
+
+TWSE 專用快取與模型位於：
+
+```text
+research/data/phase4d_cache_twse/
+research/data/phase5_models_twse/
+```

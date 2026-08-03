@@ -46,6 +46,11 @@ def build_parser() -> argparse.ArgumentParser:
         default="runtime/institutional/notification_plan.csv",
         help="Phase 5H 法人通知計畫 CSV",
     )
+    parser.add_argument(
+        "--twse-institutional-plan",
+        default="runtime/institutional_twse/notification_plan.csv",
+        help="Phase 6D TWSE 法人通知計畫 CSV",
+    )
     parser.add_argument("--log-level", default="INFO")
     return parser
 
@@ -71,12 +76,20 @@ def run(args: argparse.Namespace) -> int:
         for config in user_configs
         if institutional_candidates_settings(config)["enabled"]
     ]
+    institutional_plan_paths = [
+        Path(args.institutional_plan),
+        Path(getattr(args, "twse_institutional_plan", "runtime/institutional_twse/notification_plan.csv")),
+    ]
+    existing_institutional_plans = [path for path in institutional_plan_paths if path.exists()]
     if (
         args.enable_institutional_candidates
         and institutional_enabled_users
-        and not Path(args.institutional_plan).exists()
+        and not existing_institutional_plans
     ):
-        raise FileNotFoundError(f"找不到法人通知計畫：{args.institutional_plan}")
+        raise FileNotFoundError(
+            "找不到任何法人通知計畫："
+            + "、".join(str(path) for path in institutional_plan_paths)
+        )
 
     state = StateManager(args.state_file)
     notifier = DiscordNotifier()
@@ -152,10 +165,16 @@ def run(args: argparse.Namespace) -> int:
             results.append(result)
 
     institutional_dispatch = None
+    institutional_plan_dispatches = {
+        "loaded_plans": [str(path) for path in existing_institutional_plans],
+        "missing_plans": [str(path) for path in institutional_plan_paths if not path.exists()],
+    }
     if args.enable_institutional_candidates:
         if institutional_enabled_users:
+            for missing_path in institutional_plan_dispatches["missing_plans"]:
+                LOGGER.info("法人通知計畫不存在，略過：%s", missing_path)
             institutional_dispatch = dispatch_institutional_notifications(
-                plan_path=args.institutional_plan,
+                plan_path=existing_institutional_plans,
                 user_configs=user_configs,
                 holding_results=results,
                 state=state,
@@ -184,11 +203,13 @@ def run(args: argparse.Namespace) -> int:
             {
                 "enabled_users": institutional_enabled_users,
                 "dispatch": asdict(institutional_dispatch),
+                "plans": institutional_plan_dispatches,
             }
             if institutional_dispatch is not None
             else {
                 "enabled_users": institutional_enabled_users,
                 "dispatch": None,
+                "plans": institutional_plan_dispatches,
             }
         ),
     }

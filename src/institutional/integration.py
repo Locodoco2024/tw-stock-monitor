@@ -17,12 +17,13 @@ from src.state.manager import StateManager
 
 LOGGER = logging.getLogger("tw-stock-monitor.institutional")
 
-ACTIVE_NOTIFICATION_TYPES = {"LAYOUT_CONFIRMED_DIRECT", "NEW_CANDIDATE"}
+ACTIVE_NOTIFICATION_TYPES = {"LAYOUT_CONFIRMED_DIRECT", "NEW_CANDIDATE", "TWSE_TRACK_CONFIRMED"}
 STATE_UPDATE_TYPES = {
     "LAYOUT_CONFIRMED",
     "LAYOUT_CONFIRMED_AND_EXTENDED",
     "DAY20_EXTEND",
     "DAY20_EXTEND_STRONG",
+    "TWSE_DAY40_END",
 }
 NOTIFICATION_PRIORITY = {
     "LAYOUT_CONFIRMED_DIRECT": 50,
@@ -31,6 +32,8 @@ NOTIFICATION_PRIORITY = {
     "LAYOUT_CONFIRMED": 30,
     "DAY20_EXTEND": 20,
     "DAY20_EXTEND_STRONG": 20,
+    "TWSE_TRACK_CONFIRMED": 50,
+    "TWSE_DAY40_END": 10,
 }
 
 
@@ -110,6 +113,7 @@ def load_institutional_plan(path: str | Path) -> list[InstitutionalNotification]
                     negative_factors=str(raw.get("negative_factors") or ""),
                     is_configured_stock=_truthy(raw.get("is_configured_stock")),
                     trade_action=trade_action,
+                    market=str(raw.get("market") or "tpex").strip().lower(),
                     estimated_cost_window_days=_int_or_none(
                         raw.get("estimated_cost_window_days")
                     ),
@@ -142,14 +146,34 @@ def load_institutional_plan(path: str | Path) -> list[InstitutionalNotification]
 
 def dispatch_institutional_notifications(
     *,
-    plan_path: str | Path,
+    plan_path: str | Path | Iterable[str | Path],
     user_configs: Iterable[dict],
     holding_results: Iterable[HoldingMonitorResult],
     state: StateManager,
     notifier: DiscordNotifier,
     no_discord: bool,
 ) -> InstitutionalDispatchResult:
-    notifications = load_institutional_plan(plan_path)
+    if isinstance(plan_path, (str, Path)):
+        notifications = load_institutional_plan(plan_path)
+    else:
+        notifications = [
+            notification
+            for path in plan_path
+            for notification in load_institutional_plan(path)
+        ]
+        keys = [notification.state_key for notification in notifications]
+        if len(keys) != len(set(keys)):
+            raise ValueError("多市場法人通知計畫含重複 user/market/event/type/date")
+        notifications = sorted(
+            notifications,
+            key=lambda item: (
+                item.user_id,
+                -NOTIFICATION_PRIORITY.get(item.notification_type, 0),
+                -(item.percentile or -1.0),
+                item.market,
+                item.symbol,
+            ),
+        )
     configs = {str(config["user"]["id"]): config for config in user_configs}
     holding_by_key = {
         (result.user_id, result.symbol): result for result in holding_results

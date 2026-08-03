@@ -31,12 +31,10 @@ from research.institutional_model.phase4_selection import (
     moving_block_bootstrap_mean_ci,
     resolve_phase3_shard_directory,
 )
-from research.institutional_model.phase4_stability import CORE_FEATURE_COLUMNS
+from research.institutional_model.market_model_spec import market_model_spec
 
 
 PHASE4D_VERSION = "phase4d-v1"
-TARGET_MARKET = "tpex"
-TARGET_CANDIDATE = "core22_l2_1e-3"
 DEFAULT_HORIZONS = (10, 20, 40)
 LABEL_ROUND_DIGITS = 10
 EPSILON = 1e-12
@@ -44,6 +42,7 @@ EPSILON = 1e-12
 
 @dataclass(frozen=True)
 class Phase4DHorizonSettings:
+    target_market: str = "tpex"
     horizons: tuple[int, ...] = DEFAULT_HORIZONS
     label_threshold: float = 0.05
     minimum_daily_stocks: int = 50
@@ -65,6 +64,8 @@ class Phase4DHorizonSettings:
     random_seed: int = 20260728
 
     def validate(self) -> None:
+        if self.target_market not in {"twse", "tpex"}:
+            raise ValueError("Phase 4D target_market 只支援 twse 或 tpex")
         horizons = tuple(sorted(set(int(value) for value in self.horizons)))
         if horizons != self.horizons:
             raise ValueError("Phase 4D horizons 必須由小到大且不可重複")
@@ -103,10 +104,11 @@ class HorizonFold:
     train_end_year: int
     calibration_year: int
     test_year: int
+    market: str = "tpex"
 
     @property
     def fold_id(self) -> str:
-        return f"{TARGET_MARKET}_{self.horizon_days}d_{self.test_year}"
+        return f"{self.market}_{self.horizon_days}d_{self.test_year}"
 
 
 @dataclass(frozen=True)
@@ -128,7 +130,7 @@ def run_phase4d_horizon_research(
     settings: Phase4DHorizonSettings | None = None,
     force: bool = False,
 ) -> Phase4DHorizonResult:
-    """Compare 10/20/40-day TPEx labels without downloading or rebuilding Phase 1-3."""
+    """Compare 10/20/40-day labels for one market without rebuilding Phase 1-3."""
     config = settings or Phase4DHorizonSettings()
     config.validate()
     output = Path(output_dir)
@@ -182,14 +184,19 @@ def build_horizon_research_frame(
             """
             SELECT stock_id, stock_name, delisting_date
             FROM model_universe
-            WHERE training_enabled=1 AND market_type='tpex'
+            WHERE training_enabled=1 AND market_type=?
             ORDER BY stock_id
-            """
+            """,
+            (settings.target_market,),
         )
     ]
     if not stocks:
-        raise RuntimeError("SQLite model_universe 沒有可訓練的 TPEx 股票")
-    source_columns = _phase3_source_columns()
+        raise RuntimeError(
+            f"SQLite model_universe 沒有可訓練的 {settings.target_market.upper()} 股票"
+        )
+    source_columns = _phase3_source_columns(
+        market_model_spec(settings.target_market).feature_columns
+    )
     market_dates = [
         str(row["date"])
         for row in database.query("SELECT date FROM market_calendar ORDER BY date")
@@ -213,7 +220,7 @@ def build_horizon_research_frame(
         if shard.empty:
             continue
         shard = shard[
-            (shard["market_type"].astype(str).str.lower() == TARGET_MARKET)
+            (shard["market_type"].astype(str).str.lower() == settings.target_market)
             & (shard["feature_status"].astype(str) == "ok")
             & (pd.to_numeric(shard["liquidity_pass_20m"], errors="coerce") == 1)
         ].copy()
@@ -263,7 +270,9 @@ def build_horizon_research_frame(
             print(f"Phase 4D 資料準備：{position}/{len(stocks)}")
 
     if not frames:
-        raise RuntimeError("Phase 4D 沒有可用的 TPEx Phase 3 分片")
+        raise RuntimeError(
+            f"Phase 4D 沒有可用的 {settings.target_market.upper()} Phase 3 分片"
+        )
     result = pd.concat(frames, ignore_index=True)
     for horizon in (10, 20):
         returns = pd.to_numeric(
@@ -297,7 +306,11 @@ def evaluate_horizon_frame(
     purge_rows: list[dict[str, Any]] = []
 
     for horizon in settings.horizons:
-        horizon_frame = _eligible_horizon_frame(frame, horizon)
+        horizon_frame = _eligible_horizon_frame(
+            frame,
+            horizon,
+            feature_columns=market_model_spec(settings.target_market).feature_columns,
+        )
         folds = build_horizon_folds(horizon_frame, horizon=horizon, settings=settings)
         if not folds:
             raise RuntimeError(f"{horizon} 日沒有足夠年度建立時間滾動折")
@@ -383,6 +396,7 @@ def build_horizon_folds(
         result.append(
             HorizonFold(
                 horizon_days=horizon,
+                market=settings.target_market,
                 train_start_year=first_year,
                 train_end_year=train_end,
                 calibration_year=calibration_year,
@@ -403,7 +417,8 @@ def evaluate_horizon_fold(
     _ensure_all_classes(labels[train_mask], fold.fold_id, "train")
     _ensure_all_classes(labels[calibration_mask], fold.fold_id, "calibration")
     _ensure_all_classes(labels[test_mask], fold.fold_id, "test")
-    features = frame[list(CORE_FEATURE_COLUMNS)].to_numpy(dtype=np.float64)
+    feature_columns = market_model_spec(settings.target_market).feature_columns
+    features = frame[list(feature_columns)].to_numpy(dtype=np.float64)
     seed = settings.random_seed + fold.horizon_days * 100 + fold.test_year
     preprocessor = fit_mask_preprocessor(
         features=features,
@@ -521,7 +536,11 @@ def evaluate_horizon_fold(
         "epochs_completed": len(history),
         **yearly_ranking,
     }
-    coefficients = coefficient_report_rows(model=model, fold=fold)
+    coefficients = coefficient_report_rows(
+        model=model,
+        fold=fold,
+        feature_columns=market_model_spec(settings.target_market).feature_columns,
+    )
     for row in history:
         row.update(
             {
@@ -946,8 +965,11 @@ def build_horizon_summary(
     rows: list[dict[str, Any]] = [
         {"metric": "pipeline_status", "value": pipeline_status},
         {"metric": "phase4d_version", "value": PHASE4D_VERSION},
-        {"metric": "market_type", "value": TARGET_MARKET},
-        {"metric": "candidate_id", "value": TARGET_CANDIDATE},
+        {"metric": "market_type", "value": settings.target_market},
+        {
+            "metric": "candidate_id",
+            "value": market_model_spec(settings.target_market).candidate_id,
+        },
         {"metric": "horizons", "value": ",".join(map(str, settings.horizons))},
         {"metric": "label_threshold", "value": settings.label_threshold},
         {"metric": "source_rows", "value": len(frame)},
@@ -1119,6 +1141,7 @@ def coefficient_report_rows(
     *,
     model: SoftmaxModel,
     fold: HorizonFold,
+    feature_columns: tuple[str, ...],
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for class_index, class_label in enumerate(LABELS):
@@ -1132,7 +1155,7 @@ def coefficient_report_rows(
                 "coefficient": float(model.intercept[class_index]),
             }
         )
-        for feature_index, feature_name in enumerate(CORE_FEATURE_COLUMNS):
+        for feature_index, feature_name in enumerate(feature_columns):
             rows.append(
                 {
                     "fold_id": fold.fold_id,
@@ -1209,7 +1232,12 @@ def export_phase4d_reports(
     return paths
 
 
-def _eligible_horizon_frame(frame: pd.DataFrame, horizon: int) -> pd.DataFrame:
+def _eligible_horizon_frame(
+    frame: pd.DataFrame,
+    horizon: int,
+    *,
+    feature_columns: tuple[str, ...],
+) -> pd.DataFrame:
     selected = frame[frame[f"label_{horizon}d"].isin(LABELS)].copy()
     selected["label"] = selected[f"label_{horizon}d"].astype(str)
     selected["label_index"] = selected["label"].map(LABEL_TO_INDEX).astype(np.uint8)
@@ -1220,9 +1248,9 @@ def _eligible_horizon_frame(frame: pd.DataFrame, horizon: int) -> pd.DataFrame:
     selected["signal_year"] = pd.to_numeric(
         selected["signal_year"], errors="raise"
     ).astype(np.int16)
-    for feature in CORE_FEATURE_COLUMNS:
+    for feature in feature_columns:
         selected[feature] = pd.to_numeric(selected[feature], errors="coerce")
-    required = ["adjusted_return", *CORE_FEATURE_COLUMNS]
+    required = ["adjusted_return", *feature_columns]
     if selected[required].isna().any().any():
         raise RuntimeError(f"{horizon} 日研究資料包含 NaN")
     values = selected[required].to_numpy(dtype=np.float64)
@@ -1352,33 +1380,37 @@ def _resolve_cache_directory(
     wal_stat = wal_path.stat() if wal_path.exists() else None
     source_markers = {
         "maximum_market_date": database.scalar("SELECT MAX(date) FROM market_calendar"),
-        "maximum_tpex_price_date": database.scalar(
+        "maximum_target_price_date": database.scalar(
             """
             SELECT MAX(p.date)
             FROM stock_prices p
             JOIN model_universe u ON u.stock_id=p.stock_id
-            WHERE u.training_enabled=1 AND u.market_type='tpex'
-            """
+            WHERE u.training_enabled=1 AND u.market_type=?
+            """,
+            (settings.target_market,),
         ),
-        "tpex_price_rows": database.scalar(
+        "target_price_rows": database.scalar(
             """
             SELECT COUNT(*)
             FROM stock_prices p
             JOIN model_universe u ON u.stock_id=p.stock_id
-            WHERE u.training_enabled=1 AND u.market_type='tpex'
-            """
+            WHERE u.training_enabled=1 AND u.market_type=?
+            """,
+            (settings.target_market,),
         ),
-        "tpex_corporate_action_rows": database.scalar(
+        "target_corporate_action_rows": database.scalar(
             """
             SELECT COUNT(*)
             FROM corporate_actions a
             JOIN model_universe u ON u.stock_id=a.stock_id
-            WHERE u.training_enabled=1 AND u.market_type='tpex'
-            """
+            WHERE u.training_enabled=1 AND u.market_type=?
+            """,
+            (settings.target_market,),
         ),
     }
     payload = {
         "version": PHASE4D_VERSION,
+        "target_market": settings.target_market,
         "phase3_signature": phase3_signature,
         "database_size": stat.st_size,
         "database_mtime_ns": stat.st_mtime_ns,
@@ -1387,7 +1419,7 @@ def _resolve_cache_directory(
         "source_markers": source_markers,
         "horizons": settings.horizons,
         "threshold": settings.label_threshold,
-        "features": CORE_FEATURE_COLUMNS,
+        "features": market_model_spec(settings.target_market).feature_columns,
     }
     signature = hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -1404,7 +1436,7 @@ def _resolve_cache_directory(
     return directory
 
 
-def _phase3_source_columns() -> list[str]:
+def _phase3_source_columns(feature_columns: tuple[str, ...]) -> list[str]:
     columns = [
         "stock_id",
         "stock_name",
@@ -1424,7 +1456,7 @@ def _phase3_source_columns() -> list[str]:
                 f"label_status_{horizon}d",
             ]
         )
-    columns.extend(CORE_FEATURE_COLUMNS)
+    columns.extend(feature_columns)
     return columns
 
 

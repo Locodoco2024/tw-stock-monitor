@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import time
 from dataclasses import replace
 from datetime import datetime
@@ -74,6 +75,18 @@ from research.institutional_model.phase5_entry_risk import (
     Phase5ISettings,
     run_phase5i_entry_risk_research,
 )
+from research.institutional_model.phase6_twse_40d import (
+    Phase6BTWSE40DSettings,
+    run_phase6b_twse_40d_validation,
+)
+from research.institutional_model.phase6_twse_lifecycle import (
+    Phase6CTWSELifecycleSettings,
+    run_phase6c_twse_lifecycle_validation,
+)
+from research.institutional_model.phase6_twse_final import (
+    Phase6DTWSEFinalSettings,
+    run_phase6d_twse_final_model,
+)
 from research.institutional_model.self_check import run_self_check
 from research.institutional_model.universe import (
     compare_with_current_holdings,
@@ -93,6 +106,7 @@ PHASE2_COMMANDS = {
 PHASE3_COMMANDS = {"phase3", "phase3-audit", "phase3-label-repair"}
 PHASE4_COMMANDS = {"phase4a", "phase4b", "phase4c", "phase4d", "phase4e", "phase4f"}
 PHASE5_COMMANDS = {"phase5a", "phase5b", "phase5d", "phase5i"}
+PHASE6_COMMANDS = {"phase6b", "phase6c", "phase6d"}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -123,6 +137,9 @@ def build_parser() -> argparse.ArgumentParser:
             "phase5b",
             "phase5d",
             "phase5i",
+            "phase6b",
+            "phase6c",
+            "phase6d",
         ),
     )
     parser.add_argument("--start-date")
@@ -392,6 +409,72 @@ def build_parser() -> argparse.ArgumentParser:
         default=3,
         help="Phase 5I bootstrap 移動區塊月份",
     )
+    parser.add_argument(
+        "--phase6b-min-daily-stocks",
+        type=int,
+        default=50,
+        help="Phase 6B TWSE 40日排名每日最低股票數",
+    )
+    parser.add_argument(
+        "--phase6b-ranking-l2",
+        type=float,
+        default=0.001,
+        help="Phase 6B TWSE 40日排名 ridge L2",
+    )
+    parser.add_argument(
+        "--phase6b-bootstrap-iterations",
+        type=int,
+        default=2_000,
+        help="Phase 6B 月份移動區塊 bootstrap 次數",
+    )
+    parser.add_argument(
+        "--phase6b-bootstrap-block-months",
+        type=int,
+        default=3,
+        help="Phase 6B bootstrap 每個移動區塊包含幾個月",
+    )
+    parser.add_argument(
+        "--phase6c-min-daily-stocks",
+        type=int,
+        default=50,
+        help="Phase 6C 各流動性母體每日最低股票數",
+    )
+    parser.add_argument(
+        "--phase6c-min-events",
+        type=int,
+        default=100,
+        help="Phase 6C 強候選規則最低事件數",
+    )
+    parser.add_argument(
+        "--phase6c-min-stocks",
+        type=int,
+        default=30,
+        help="Phase 6C 強候選規則最低股票數",
+    )
+    parser.add_argument(
+        "--phase6c-bootstrap-iterations",
+        type=int,
+        default=1_000,
+        help="Phase 6C 生命週期月份區塊 bootstrap 次數",
+    )
+    parser.add_argument(
+        "--phase6c-bootstrap-block-months",
+        type=int,
+        default=3,
+        help="Phase 6C bootstrap 每個移動區塊包含幾個月",
+    )
+    parser.add_argument(
+        "--phase6d-model-dir",
+        type=Path,
+        default=PROJECT_ROOT / "models" / "twse",
+        help="Phase 6D TWSE 部署模型輸出目錄",
+    )
+    parser.add_argument(
+        "--phase6d-ranking-l2",
+        type=float,
+        default=0.001,
+        help="Phase 6D TWSE 40日最終模型 ridge L2",
+    )
     return parser
 
 
@@ -399,7 +482,7 @@ def main() -> None:
     args = build_parser().parse_args()
     default_start = (
         "2015-01-01"
-        if args.command in PHASE2_COMMANDS | PHASE3_COMMANDS | PHASE4_COMMANDS | PHASE5_COMMANDS
+        if args.command in PHASE2_COMMANDS | PHASE3_COMMANDS | PHASE4_COMMANDS | PHASE5_COMMANDS | PHASE6_COMMANDS
         else "2019-01-01"
     )
     settings = ResearchSettings(start_date=args.start_date or default_start)
@@ -420,7 +503,7 @@ def main() -> None:
     database = ResearchDatabase(settings.database_path)
     database.initialize()
 
-    if args.command in PHASE2_COMMANDS | PHASE3_COMMANDS | PHASE4_COMMANDS:
+    if args.command in PHASE2_COMMANDS | PHASE3_COMMANDS | PHASE4_COMMANDS | PHASE6_COMMANDS:
         settings = _resolve_phase2_backfill_end_date(args, settings, database)
 
     if args.command in PHASE1_COMMANDS:
@@ -464,6 +547,15 @@ def main() -> None:
         return
     if args.command == "phase5i":
         _run_phase5i(args, settings, database)
+        return
+    if args.command == "phase6b":
+        _run_phase6b(args, settings, database)
+        return
+    if args.command == "phase6c":
+        _run_phase6c(args, settings, database)
+        return
+    if args.command == "phase6d":
+        _run_phase6d(args, settings, database)
         return
 
     _run_phase3(args, settings, database)
@@ -909,6 +1001,136 @@ def _run_phase3_label_repair(
         )
 
 
+
+
+def _run_phase6b(
+    args: argparse.Namespace,
+    settings: ResearchSettings,
+    database: ResearchDatabase,
+) -> None:
+    phase6b_settings = Phase6BTWSE40DSettings(
+        minimum_daily_stocks=args.phase6b_min_daily_stocks,
+        first_test_year=args.phase4_first_test_year,
+        quantile_sample_size=args.phase4_quantile_sample_size,
+        training_chunk_size=args.phase4_chunk_size,
+        ranking_l2_penalty=args.phase6b_ranking_l2,
+        bootstrap_iterations=args.phase6b_bootstrap_iterations,
+        bootstrap_block_months=args.phase6b_bootstrap_block_months,
+    )
+    result = run_phase6b_twse_40d_validation(
+        database=database,
+        output_dir=settings.output_dir,
+        shard_root=settings.database_path.parent / "phase3_shards",
+        cache_root=_market_scoped_data_dir(settings, "twse", "phase4d_cache"),
+        settings=phase6b_settings,
+        force=args.force,
+    )
+    print(
+        "Phase 6B TWSE 40-day return-rank validation completed: "
+        f"status {result.status}, folds {result.completed_folds}/"
+        f"{result.expected_folds}, failed {result.failed_folds}, "
+        f"validation_passed {int(result.validation_passed)}"
+    )
+    _print_paths(list(result.output_paths))
+    if result.status != "PASS":
+        raise SystemExit(
+            "Phase 6B has failed folds. Check phase6b_fold_summary.csv."
+        )
+    if not result.validation_passed:
+        raise SystemExit(
+            "TWSE 40-day return-rank validation did not pass. Reports were preserved; deployment remains disabled."
+        )
+
+
+def _run_phase6c(
+    args: argparse.Namespace,
+    settings: ResearchSettings,
+    database: ResearchDatabase,
+) -> None:
+    summary_path = settings.output_dir / "phase6b_summary.csv"
+    if not summary_path.exists():
+        raise SystemExit("Phase 6C requires phase6b_summary.csv. Complete Phase 6B first.")
+    phase6b = _read_metric_map(summary_path)
+    if phase6b.get("return_rank_40d_validation_pass") not in {"1", "1.0"}:
+        raise SystemExit("Phase 6B TWSE 40-day validation has not passed.")
+    phase6c_settings = Phase6CTWSELifecycleSettings(
+        minimum_daily_stocks=args.phase6c_min_daily_stocks,
+        minimum_candidate_events=args.phase6c_min_events,
+        minimum_candidate_stocks=args.phase6c_min_stocks,
+        bootstrap_iterations=args.phase6c_bootstrap_iterations,
+        bootstrap_block_months=args.phase6c_bootstrap_block_months,
+    )
+    result = run_phase6c_twse_lifecycle_validation(
+        database=database,
+        output_dir=settings.output_dir,
+        shard_root=settings.database_path.parent / "phase3_shards",
+        outcome_cache_root=_market_scoped_data_dir(
+            settings, "twse", "phase6c_outcome_cache"
+        ),
+        settings=phase6c_settings,
+        force=args.force,
+    )
+    print(
+        "Phase 6C TWSE lifecycle and liquidity validation completed: "
+        f"status {result.status}, events {result.event_rows:,}, "
+        f"candidate_found {int(result.lifecycle_candidate_found)}"
+    )
+    _print_paths(list(result.output_paths))
+    if not result.lifecycle_candidate_found:
+        raise SystemExit(
+            "No TWSE lifecycle rule passed the fixed Phase 6C criteria. "
+            "Reports were preserved; Phase 6D remains disabled."
+        )
+
+
+def _run_phase6d(
+    args: argparse.Namespace,
+    settings: ResearchSettings,
+    database: ResearchDatabase,
+) -> None:
+    result = run_phase6d_twse_final_model(
+        database=database,
+        output_dir=settings.output_dir,
+        shard_root=settings.database_path.parent / "phase3_shards",
+        cache_root=_market_scoped_data_dir(settings, "twse", "phase4d_cache"),
+        model_root=args.phase6d_model_dir,
+        settings=Phase6DTWSEFinalSettings(
+            minimum_daily_stocks=args.phase6b_min_daily_stocks,
+            quantile_sample_size=args.phase4_quantile_sample_size,
+            ranking_l2_penalty=args.phase6d_ranking_l2,
+        ),
+        force=args.force,
+    )
+    print(
+        "Phase 6D TWSE final 40-day model completed: "
+        f"status {result.status}, training_rows {result.training_rows:,}, "
+        f"signal_dates {result.signal_dates:,}"
+    )
+    _print_paths(list(result.output_paths))
+
+
+def _read_metric_map(path: Path) -> dict[str, str]:
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        return {
+            str(row.get("metric") or ""): str(row.get("value") or "")
+            for row in csv.DictReader(handle)
+        }
+
+
+def _single_target_market(args: argparse.Namespace) -> str:
+    return "tpex" if args.phase4_market == "all" else args.phase4_market
+
+
+def _market_scoped_data_dir(
+    settings: ResearchSettings, market: str, base_name: str
+) -> Path:
+    return (
+        settings.database_path.parent / base_name
+        if market == "tpex"
+        else settings.database_path.parent / f"{base_name}_{market}"
+    )
+
+
 def _run_phase4a(
     args: argparse.Namespace,
     settings: ResearchSettings,
@@ -1009,9 +1231,9 @@ def _run_phase4d(
     settings: ResearchSettings,
     database: ResearchDatabase,
 ) -> None:
-    if args.phase4_market == "twse":
-        raise SystemExit("Phase 4D 目前固定只研究 TPEx 的 10／20／40 日期限。")
+    target_market = _single_target_market(args)
     phase4d_settings = Phase4DHorizonSettings(
+        target_market=target_market,
         label_threshold=args.phase4d_label_threshold,
         minimum_daily_stocks=args.phase4d_min_daily_stocks,
         first_test_year=args.phase4_first_test_year,
@@ -1024,12 +1246,12 @@ def _run_phase4d(
         database=database,
         output_dir=settings.output_dir,
         shard_root=settings.database_path.parent / "phase3_shards",
-        cache_root=settings.database_path.parent / "phase4d_cache",
+        cache_root=_market_scoped_data_dir(settings, target_market, "phase4d_cache"),
         settings=phase4d_settings,
         force=args.force,
     )
     print(
-        "Phase 4D TPEx 持有期研究完成："
+        f"Phase 4D {target_market.upper()} 持有期研究完成："
         f"狀態 {result.status}、完成折 {result.completed_folds}/"
         f"{result.expected_folds}、失敗 {result.failed_folds}、"
         f"可進行期限決策 {int(result.ready_for_horizon_decision)}"
@@ -1044,9 +1266,9 @@ def _run_phase4e(
     settings: ResearchSettings,
     database: ResearchDatabase,
 ) -> None:
-    if args.phase4_market == "twse":
-        raise SystemExit("Phase 4E 目前固定研究 TPEx 的 20 日主模型目標。")
+    target_market = _single_target_market(args)
     phase4e_settings = Phase4ETargetSettings(
+        target_market=target_market,
         label_threshold=args.phase4e_label_threshold,
         minimum_daily_stocks=args.phase4e_min_daily_stocks,
         first_test_year=args.phase4_first_test_year,
@@ -1062,12 +1284,12 @@ def _run_phase4e(
         database=database,
         output_dir=settings.output_dir,
         shard_root=settings.database_path.parent / "phase3_shards",
-        cache_root=settings.database_path.parent / "phase4d_cache",
+        cache_root=_market_scoped_data_dir(settings, target_market, "phase4d_cache"),
         settings=phase4e_settings,
         force=args.force,
     )
     print(
-        "Phase 4E TPEx 20 日模型目標研究完成："
+        f"Phase 4E {target_market.upper()} 20 日模型目標研究完成："
         f"狀態 {result.status}、完成折 {result.completed_folds}/"
         f"{result.expected_folds}、失敗 {result.failed_folds}、"
         f"可進行模型目標決策 {int(result.ready_for_target_decision)}"
@@ -1075,15 +1297,21 @@ def _run_phase4e(
     _print_paths(list(result.output_paths))
     if result.status != "PASS":
         raise SystemExit("Phase 4E 尚有未完成折；請先檢查 phase4e_fold_summary.csv。")
+    if target_market == "twse":
+        summary = _read_metric_map(settings.output_dir / "phase4e_summary.csv")
+        if summary.get("return_rank_validation_pass") not in {"1", "1.0"}:
+            raise SystemExit(
+                "TWSE 20 日 return-rank 樣本外驗證未通過；已保留報告，停止 Phase 4F／5D。"
+            )
 
 
 def _run_phase4f(
     args: argparse.Namespace,
     settings: ResearchSettings,
 ) -> None:
-    if args.phase4_market == "twse":
-        raise SystemExit("Phase 4F 目前固定研究 TPEx return rank 訊號生命週期。")
+    target_market = _single_target_market(args)
     phase4f_settings = Phase4FLifecycleSettings(
+        target_market=target_market,
         minimum_daily_stocks=args.phase4f_min_daily_stocks,
         bootstrap_iterations=args.phase4f_bootstrap_iterations,
         bootstrap_block_months=args.phase4f_bootstrap_block_months,
@@ -1093,12 +1321,18 @@ def _run_phase4f(
         settings=phase4f_settings,
     )
     print(
-        "Phase 4F TPEx 法人布局訊號生命週期研究完成："
+        f"Phase 4F {target_market.upper()} 法人布局訊號生命週期研究完成："
         f"狀態 {result.status}、來源樣本 {result.source_rows:,}、"
         f"事件 {result.event_rows:,}、"
         f"可進行通知規則決策 {int(result.ready_for_lifecycle_decision)}"
     )
     _print_paths(list(result.output_paths))
+    if target_market == "twse" and (
+        result.status != "PASS" or not result.ready_for_lifecycle_decision
+    ):
+        raise SystemExit(
+            "TWSE 生命週期驗證未完成；已保留 Phase 4F 報告，停止 Phase 5D。"
+        )
 
 
 def _run_phase5a(
@@ -1171,7 +1405,9 @@ def _run_phase5d(
     args: argparse.Namespace,
     settings: ResearchSettings,
 ) -> None:
+    target_market = _single_target_market(args)
     phase5d_settings = Phase5DSettings(
+        target_market=target_market,
         minimum_daily_stocks=args.phase5d_min_daily_stocks,
         quantile_sample_size=args.phase4_quantile_sample_size,
         ranking_l2_penalty=args.phase5d_ranking_l2,
@@ -1181,12 +1417,12 @@ def _run_phase5d(
     result = run_phase5d_final_model(
         output_dir=settings.output_dir,
         shard_root=settings.database_path.parent / "phase3_shards",
-        model_root=settings.database_path.parent / "phase5_models",
+        model_root=_market_scoped_data_dir(settings, target_market, "phase5_models"),
         settings=phase5d_settings,
         force=args.force,
     )
     print(
-        "Phase 5D TPEx 最終法人模型與通知重播完成："
+        f"Phase 5D {target_market.upper()} 最終法人模型與通知重播完成："
         f"狀態 {result.status}、成熟訓練列 {result.training_rows:,}、"
         f"重播事件 {result.replay_events:,}、通知 {result.replay_notifications:,}"
     )

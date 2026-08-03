@@ -81,11 +81,15 @@ class DiscordNotifier:
         holding: HoldingMonitorResult | None = None,
     ) -> None:
         title_prefix, status_text = _institutional_status(notification.notification_type)
+        market = str(notification.market or "tpex").lower()
+        market_label = "TWSE 上市" if market == "twse" else "TPEx 上櫃"
+        rank_label = "同日上市法人排名" if market == "twse" else "同日上櫃法人排名"
         stock_name = f" {notification.name}" if notification.name else ""
         fields: list[dict[str, Any]] = [
+            {"name": "市場", "value": market_label, "inline": True},
             {"name": "法人狀態", "value": status_text, "inline": True},
             {
-                "name": "同日法人排名",
+                "name": rank_label,
                 "value": (
                     f"{notification.percentile:.1f} 百分位"
                     if notification.percentile is not None
@@ -199,7 +203,7 @@ class DiscordNotifier:
             "fields": fields,
             "footer": {
                 "text": (
-                    "法人分數是 TPEx 同日相對排序；推估成本以近20日三法人合計"
+                    f"法人分數是{market_label}同日相對排序；推估成本以近20日三法人合計"
                     "正淨買超股數加權日內典型價計算，非真實持倉成本；"
                     "僅供自行判斷，不是買賣建議"
                 )
@@ -221,6 +225,8 @@ def _institutional_status(notification_type: str) -> tuple[str, str]:
         "LAYOUT_CONFIRMED_AND_EXTENDED": ("🧭", "布局確認並延長觀察"),
         "DAY20_EXTEND": ("📌", "第20日仍在前20%，延長觀察"),
         "DAY20_EXTEND_STRONG": ("📌", "第20日排名仍高，延長觀察"),
+        "TWSE_TRACK_CONFIRMED": ("🔥", "上市法人排名連續3日前10%，建立40日追蹤"),
+        "TWSE_DAY40_END": ("🏁", "上市法人40日追蹤期結束"),
     }
     return mapping.get(notification_type, ("📎", notification_type))
 

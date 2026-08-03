@@ -17,7 +17,6 @@ from research.institutional_model.phase4_stability import CONFIRMATION_START_YEA
 
 
 PHASE4F_VERSION = "phase4f-v1"
-TARGET_MARKET = "tpex"
 TARGET_SCORE_COLUMN = "return_rank_score_daily_percentile"
 PRIMARY_HORIZON_DAYS = 20
 EXTENSION_HORIZON_DAYS = 40
@@ -39,6 +38,7 @@ REQUIRED_COLUMNS = (
 
 @dataclass(frozen=True)
 class Phase4FLifecycleSettings:
+    target_market: str = "tpex"
     minimum_daily_stocks: int = 50
     entry_thresholds: tuple[float, ...] = ENTRY_THRESHOLDS
     confirmation_days: tuple[int, ...] = CONFIRMATION_DAYS
@@ -52,6 +52,8 @@ class Phase4FLifecycleSettings:
     random_seed: int = 20260729
 
     def validate(self) -> None:
+        if self.target_market not in {"twse", "tpex"}:
+            raise ValueError("Phase 4F target_market 只支援 twse 或 tpex")
         if self.minimum_daily_stocks < 10:
             raise ValueError("Phase 4F 每日最少股票數不可小於 10")
         if tuple(sorted(set(self.entry_thresholds))) != self.entry_thresholds:
@@ -1004,7 +1006,7 @@ def build_input_audit(
 ) -> pd.DataFrame:
     rows: list[dict[str, Any]] = [
         {"metric": "phase4f_version", "value": PHASE4F_VERSION},
-        {"metric": "market", "value": TARGET_MARKET},
+        {"metric": "market", "value": settings.target_market},
         {"metric": "score_column", "value": TARGET_SCORE_COLUMN},
         {"metric": "source_rows", "value": len(base)},
         {"metric": "source_stocks", "value": base["stock_id"].nunique()},
@@ -1041,7 +1043,7 @@ def build_lifecycle_summary(
     rows: list[dict[str, Any]] = [
         {"metric": "phase4f_version", "value": PHASE4F_VERSION},
         {"metric": "pipeline_status", "value": "PASS"},
-        {"metric": "market", "value": TARGET_MARKET},
+        {"metric": "market", "value": settings.target_market},
         {"metric": "primary_horizon_days", "value": PRIMARY_HORIZON_DAYS},
         {"metric": "extension_horizon_days", "value": EXTENSION_HORIZON_DAYS},
         {"metric": "score_column", "value": TARGET_SCORE_COLUMN},

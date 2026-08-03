@@ -69,6 +69,7 @@ class InstitutionalNotification:
     negative_factors: str
     is_configured_stock: bool
     trade_action: str = "TRACK_ONLY"
+    market: str = "tpex"
     estimated_cost_window_days: int | None = None
     estimated_cost_low: float | None = None
     estimated_cost_mid: float | None = None
@@ -79,14 +80,11 @@ class InstitutionalNotification:
 
     @property
     def state_key(self) -> str:
-        return "|".join(
-            [
-                self.user_id,
-                self.event_id,
-                self.notification_type,
-                self.signal_date,
-            ]
-        )
+        parts = [self.user_id]
+        if str(self.market or "tpex").lower() != "tpex":
+            parts.append(str(self.market).lower())
+        parts.extend([self.event_id, self.notification_type, self.signal_date])
+        return "|".join(parts)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

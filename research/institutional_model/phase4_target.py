@@ -31,14 +31,12 @@ from research.institutional_model.phase4_selection import (
     moving_block_bootstrap_mean_ci,
     resolve_phase3_shard_directory,
 )
-from research.institutional_model.phase4_stability import CORE_FEATURE_COLUMNS
+from research.institutional_model.market_model_spec import market_model_spec
 
 
 PHASE4E_VERSION = "phase4e-v1"
-TARGET_MARKET = "tpex"
 PRIMARY_HORIZON_DAYS = 20
 EXTENSION_HORIZON_DAYS = 40
-TARGET_CANDIDATE = "core22_l2_1e-3"
 FEATURE_GROUPS = (
     "foreign",
     "investment_trust",
@@ -49,6 +47,7 @@ FEATURE_GROUPS = (
 
 @dataclass(frozen=True)
 class Phase4ETargetSettings:
+    target_market: str = "tpex"
     label_threshold: float = 0.05
     minimum_daily_stocks: int = 50
     first_test_year: int = 2019
@@ -70,6 +69,8 @@ class Phase4ETargetSettings:
     random_seed: int = 20260729
 
     def validate(self) -> None:
+        if self.target_market not in {"twse", "tpex"}:
+            raise ValueError("Phase 4E target_market 只支援 twse 或 tpex")
         if self.label_threshold <= 0:
             raise ValueError("Phase 4E 標籤門檻必須大於 0")
         if self.minimum_daily_stocks < 10:
@@ -331,7 +332,8 @@ def evaluate_target_fold(
     settings: Phase4ETargetSettings,
 ) -> dict[str, Any]:
     train_mask, calibration_mask, test_mask, purge = build_purged_masks(frame, fold)
-    features = frame[list(CORE_FEATURE_COLUMNS)].to_numpy(dtype=np.float64)
+    feature_columns = market_model_spec(settings.target_market).feature_columns
+    features = frame[list(feature_columns)].to_numpy(dtype=np.float64)
     seed = settings.random_seed + fold.test_year
     preprocessor = fit_mask_preprocessor(
         features=features,
@@ -539,12 +541,26 @@ def evaluate_target_fold(
 
     coefficients = []
     coefficients.extend(
-        binary_coefficient_rows(up_model, fold=fold, model_target="up_20d")
+        binary_coefficient_rows(
+            up_model,
+            fold=fold,
+            model_target="up_20d",
+            feature_columns=feature_columns,
+        )
     )
     coefficients.extend(
-        binary_coefficient_rows(down_model, fold=fold, model_target="down_20d")
+        binary_coefficient_rows(
+            down_model,
+            fold=fold,
+            model_target="down_20d",
+            feature_columns=feature_columns,
+        )
     )
-    coefficients.extend(rank_coefficient_rows(rank_model, fold=fold))
+    coefficients.extend(
+        rank_coefficient_rows(
+            rank_model, fold=fold, feature_columns=feature_columns
+        )
+    )
     group_contributions = group_contribution_rows(
         x_test=x_test,
         test_frame=test_frame,
@@ -555,6 +571,7 @@ def evaluate_target_fold(
         },
         fold=fold,
         settings=settings,
+        feature_columns=feature_columns,
     )
 
     training_history: list[dict[str, Any]] = []
@@ -1147,6 +1164,7 @@ def binary_coefficient_rows(
     *,
     fold: HorizonFold,
     model_target: str,
+    feature_columns: tuple[str, ...],
 ) -> list[dict[str, Any]]:
     rows = [
         {
@@ -1167,12 +1185,17 @@ def binary_coefficient_rows(
             "feature_name": feature,
             "coefficient": float(model.weights[index]),
         }
-        for index, feature in enumerate(CORE_FEATURE_COLUMNS)
+        for index, feature in enumerate(feature_columns)
     )
     return rows
 
 
-def rank_coefficient_rows(model: LinearRankModel, *, fold: HorizonFold) -> list[dict[str, Any]]:
+def rank_coefficient_rows(
+    model: LinearRankModel,
+    *,
+    fold: HorizonFold,
+    feature_columns: tuple[str, ...],
+) -> list[dict[str, Any]]:
     rows = [
         {
             "fold_id": fold.fold_id,
@@ -1192,7 +1215,7 @@ def rank_coefficient_rows(model: LinearRankModel, *, fold: HorizonFold) -> list[
             "feature_name": feature,
             "coefficient": float(model.weights[index]),
         }
-        for index, feature in enumerate(CORE_FEATURE_COLUMNS)
+        for index, feature in enumerate(feature_columns)
     )
     return rows
 
@@ -1204,6 +1227,7 @@ def group_contribution_rows(
     models: dict[str, np.ndarray],
     fold: HorizonFold,
     settings: Phase4ETargetSettings,
+    feature_columns: tuple[str, ...],
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for model_target, weights in models.items():
@@ -1214,7 +1238,7 @@ def group_contribution_rows(
         for group_name in FEATURE_GROUPS:
             indices = [
                 index
-                for index, feature in enumerate(CORE_FEATURE_COLUMNS)
+                for index, feature in enumerate(feature_columns)
                 if feature_group(feature) == group_name
             ]
             working[f"contribution_{group_name}"] = contributions[:, indices].sum(axis=1)
@@ -1436,12 +1460,18 @@ def build_target_summary(
 ) -> pd.DataFrame:
     rows: list[dict[str, Any]] = [
         {"metric": "phase4e_version", "value": PHASE4E_VERSION},
-        {"metric": "market", "value": TARGET_MARKET},
-        {"metric": "candidate", "value": TARGET_CANDIDATE},
+        {"metric": "market", "value": settings.target_market},
+        {
+            "metric": "candidate",
+            "value": market_model_spec(settings.target_market).candidate_id,
+        },
         {"metric": "primary_horizon_days", "value": PRIMARY_HORIZON_DAYS},
         {"metric": "extension_horizon_days", "value": EXTENSION_HORIZON_DAYS},
         {"metric": "label_threshold", "value": settings.label_threshold},
-        {"metric": "model_features", "value": len(CORE_FEATURE_COLUMNS)},
+        {
+            "metric": "model_features",
+            "value": len(market_model_spec(settings.target_market).feature_columns),
+        },
         {"metric": "research_rows", "value": len(frame)},
         {"metric": "signal_dates", "value": frame["signal_date"].nunique()},
         {"metric": "completed_folds", "value": int(fold_summary["status"].eq("complete").sum())},
@@ -1501,6 +1531,54 @@ def build_target_summary(
                     },
                 ]
             )
+
+    rank_row = comparison[
+        (comparison["comparison_type"] == "ranking")
+        & (comparison["period"] == "confirmation_ex_latest")
+        & (comparison["target_or_score"] == "return_rank_score")
+        & (
+            pd.to_numeric(comparison["variant_or_horizon"], errors="coerce")
+            == PRIMARY_HORIZON_DAYS
+        )
+    ]
+    rank_bootstrap = bootstrap[
+        (bootstrap["period"] == "confirmation_ex_latest")
+        & (bootstrap["score_variant"] == "return_rank_score")
+        & (bootstrap["evaluation_horizon_days"] == PRIMARY_HORIZON_DAYS)
+    ]
+    rank_pass = 0
+    if len(rank_row) == 1 and len(rank_bootstrap) == 1:
+        rank_metric = rank_row.iloc[0]
+        rank_ci = rank_bootstrap.iloc[0]
+        total_years = int(rank_metric.get("total_years", 0) or 0)
+        positive_years = int(rank_metric.get("positive_years", 0) or 0)
+        required_positive_years = max(2, math.ceil(total_years * 0.60))
+        rank_pass = int(
+            total_years >= 3
+            and positive_years >= required_positive_years
+            and float(rank_metric.get("top20_minus_bottom20", 0.0) or 0.0) > 0
+            and float(rank_metric.get("average_daily_spearman", 0.0) or 0.0) > 0
+            and float(rank_ci.get("ci_lower", 0.0) or 0.0) > 0
+        )
+        rows.extend(
+            [
+                {"metric": "return_rank_confirmation_years", "value": total_years},
+                {"metric": "return_rank_positive_years", "value": positive_years},
+                {"metric": "return_rank_required_positive_years", "value": required_positive_years},
+                {"metric": "return_rank_confirmation_spread", "value": rank_metric.get("top20_minus_bottom20", "")},
+                {"metric": "return_rank_confirmation_daily_spearman", "value": rank_metric.get("average_daily_spearman", "")},
+                {"metric": "return_rank_confirmation_bootstrap_ci_lower", "value": rank_ci.get("ci_lower", "")},
+            ]
+        )
+    rows.extend(
+        [
+            {"metric": "return_rank_validation_pass", "value": rank_pass},
+            {
+                "metric": "return_rank_validation_rule",
+                "value": "確認期排除最新年度至少3年、正向年度>=60%、top20-bottom20>0、daily Spearman>0、95% bootstrap下緣>0",
+            },
+        ]
+    )
     return pd.DataFrame(rows)
 
 
@@ -1563,6 +1641,7 @@ def export_phase4e_reports(
 
 def _to_horizon_settings(settings: Phase4ETargetSettings) -> Phase4DHorizonSettings:
     return Phase4DHorizonSettings(
+        target_market=settings.target_market,
         horizons=(10, 20, 40),
         label_threshold=settings.label_threshold,
         minimum_daily_stocks=settings.minimum_daily_stocks,
@@ -1578,7 +1657,7 @@ def _to_horizon_settings(settings: Phase4ETargetSettings) -> Phase4DHorizonSetti
         minimum_epochs=settings.minimum_epochs,
         early_stopping_patience=settings.early_stopping_patience,
         learning_rate=settings.learning_rate,
-        l2_penalty=settings.l2_penalty,
+        l2_penalty=market_model_spec(settings.target_market).l2_penalty,
         bootstrap_iterations=settings.bootstrap_iterations,
         bootstrap_block_months=settings.bootstrap_block_months,
         random_seed=settings.random_seed,

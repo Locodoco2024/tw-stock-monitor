@@ -4,6 +4,7 @@
 
 1. 配置股的即時價格、成本損益與獲利門檻通知。
 2. TPEx 三大法人 `return_rank_score` 候選及 20～40 日生命週期通知。
+3. TWSE 三大法人 40 日排名模型候選與生命週期通知。
 
 舊規則分析、財報、同業、大盤、技術評分、加碼與買賣建議已移除。
 
@@ -89,3 +90,32 @@ Phase 5I 研究法人候選的近期淨買超推估成本帶及進場價偏離�
 ## Phase 5J 法人推估成本資訊
 
 法人 Discord 通知會額外顯示三法人合計近 20 日推估成本帶、中間值、訊號日收盤價、相對偏離及淨買超日數。推估成本沿用 Phase 5I 定義，只供使用者自行判斷，不是法人真實持倉成本，也不產生買賣建議。詳細規格見 `PHASE5J_UPDATE.md`。
+
+## Phase 6C — TWSE lifecycle and liquidity validation
+
+After Phase 6B passes, run:
+
+```powershell
+.\scripts\run-institutional-twse-lifecycle.ps1
+```
+
+Phase 6C keeps the Phase 6B model frozen and compares TWSE entry thresholds,
+consecutive confirmation days, cooldown periods, 40/60/80-day outcomes, and
+money-plus-board-lot liquidity universes. It only produces research reports and
+does not modify the production TPEx pipeline or Discord notifications.
+
+
+## Phase 6D — TWSE production pipeline
+
+After Phase 6B and Phase 6C pass:
+
+```powershell
+.\scripts\run-institutional-twse-final.ps1
+.\scripts\seed-twse-institutional-deployment.ps1
+.\scripts\publish-twse-institutional-seed.ps1
+```
+
+The TWSE production universe requires a 20-day median trading amount of at least
+NT$100 million and median volume of at least 300 board lots. A tracking event is
+created only after three consecutive days in the TWSE top 10%, and ends after 40
+market days. See `PHASE6D_TWSE_DEPLOYMENT_UPDATE.md`.

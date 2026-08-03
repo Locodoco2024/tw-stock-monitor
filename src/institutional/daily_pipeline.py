@@ -66,6 +66,7 @@ FEATURE_GROUPS = {
     "foreign": "外資",
     "investment_trust": "投信",
     "dealer_self": "自營商自行買賣",
+    "selected_total": "三法人合計",
     "consensus": "三法人一致性／加速度",
 }
 FEATURE_LABELS = {
@@ -92,6 +93,26 @@ FEATURE_LABELS = {
     "institutional_agreement_20d": "三法人近20日方向一致性",
     "selected_total_acceleration_5d_vs_20d": "三法人近5日相對20日加速度",
 }
+
+for _actor, _actor_label in (
+    ("foreign", "外資"),
+    ("investment_trust", "投信"),
+    ("dealer_self", "自營商自行買賣"),
+    ("selected_total", "三法人合計"),
+):
+    for _window in (1, 3, 5, 10, 20):
+        FEATURE_LABELS.setdefault(
+            f"{_actor}_flow_pct_{_window}d",
+            f"{_actor_label}近{_window}日買賣超占成交量"
+            if _window > 1
+            else f"{_actor_label}單日買賣超占成交量",
+        )
+    for _window in (5, 10, 20):
+        FEATURE_LABELS.setdefault(
+            f"{_actor}_buy_day_ratio_{_window}d",
+            f"{_actor_label}近{_window}日買超日比例",
+        )
+    FEATURE_LABELS.setdefault(f"{_actor}_streak", f"{_actor_label}連續買賣超")
 
 
 @dataclass(frozen=True, slots=True)
@@ -1167,6 +1188,7 @@ def rebuild_outputs(
         user_configs=user_configs,
         ready_to_send=ready_to_send,
         generated_reason=generated_reason,
+        market="tpex",
     )
     _write_gzip_csv(state_dir / "score_history.csv.gz", scores)
     _write_gzip_csv(state_dir / "latest_scores.csv.gz", latest_scores)
@@ -1220,15 +1242,17 @@ def build_feature_history(
                 "history_market_days_20": 20,
                 "normal_trading_days_20d": normal_days,
                 "median_trading_money_20d": float(np.median(money_window)),
+                "median_trading_volume_shares_20d": float(np.median(volume_window)),
+                "median_trading_volume_lots_20d": float(np.median(volume_window)) / 1000.0,
                 "max_zero_volume_streak_20d": _max_zero_streak(volume_window),
             }
             for actor in ("foreign", "investment_trust", "dealer_self", "selected_total"):
                 values = actor_values[actor]
-                for window in (1, 5, 20):
+                for window in (1, 3, 5, 10, 20):
                     net = float(values[index - window + 1 : index + 1].sum())
                     total_volume = float(volume[index - window + 1 : index + 1].sum())
                     row[f"{actor}_flow_pct_{window}d"] = net / total_volume * 100 if total_volume > 0 else 0.0
-                for window in (5, 20):
+                for window in (5, 10, 20):
                     row[f"{actor}_buy_day_ratio_{window}d"] = float(
                         (values[index - window + 1 : index + 1] > 0).sum() / window
                     )
@@ -1260,8 +1284,25 @@ def score_feature_history(
     model: DeployModel,
     *,
     minimum_daily_stocks: int,
+    minimum_trading_money: float = 20_000_000,
+    minimum_trading_volume_lots: float = 0.0,
 ) -> pd.DataFrame:
-    eligible = features[features["liquidity_pass_20m"] == 1].copy()
+    eligible_mask = (
+        (pd.to_numeric(features["normal_trading_days_20d"], errors="coerce") >= 18)
+        & (
+            pd.to_numeric(features["median_trading_money_20d"], errors="coerce")
+            >= float(minimum_trading_money)
+        )
+        & (pd.to_numeric(features["max_zero_volume_streak_20d"], errors="coerce") < 3)
+    )
+    if minimum_trading_volume_lots > 0:
+        eligible_mask &= (
+            pd.to_numeric(
+                features["median_trading_volume_lots_20d"], errors="coerce"
+            )
+            >= float(minimum_trading_volume_lots)
+        )
+    eligible = features[eligible_mask].copy()
     counts = eligible.groupby("signal_date")["stock_id"].transform("nunique")
     eligible = eligible[counts >= minimum_daily_stocks].copy()
     if eligible.empty:
@@ -1301,6 +1342,8 @@ def score_feature_history(
         "consensus_contribution",
         "positive_factors",
         "negative_factors",
+        "median_trading_money_20d",
+        "median_trading_volume_lots_20d",
     ]
     return eligible[keep].sort_values(["signal_date", "stock_id"], kind="stable").reset_index(drop=True)
 
@@ -1528,9 +1571,13 @@ def build_notification_plan(
     user_configs: list[dict[str, Any]],
     ready_to_send: bool,
     generated_reason: str,
+    market: str = "tpex",
 ) -> pd.DataFrame:
+    normalized_market = str(market).lower()
+    if normalized_market not in {"tpex", "twse"}:
+        raise ValueError(f"不支援的通知市場：{market}")
     columns = [
-        "user_id", "stock_id", "stock_name", "signal_date", "event_id",
+        "market", "user_id", "stock_id", "stock_name", "signal_date", "event_id",
         "notification_type", "notify_mode", "eligible_for_future_github",
         "ready_to_send", "trade_action", "percentile", "event_age_days",
         "reason", "positive_factors", "negative_factors",
@@ -1574,6 +1621,7 @@ def build_notification_plan(
             )
             rows.append(
                 {
+                    "market": normalized_market,
                     "user_id": user_id,
                     "stock_id": stock_id,
                     "stock_name": str(notification["stock_name"]),
@@ -1590,6 +1638,8 @@ def build_notification_plan(
                             "LAYOUT_CONFIRMED_AND_EXTENDED",
                             "DAY20_EXTEND",
                             "DAY20_EXTEND_STRONG",
+                            "TWSE_TRACK_CONFIRMED",
+                            "TWSE_DAY40_END",
                         }
                     ),
                     "ready_to_send": int(ready_to_send),
@@ -1687,7 +1737,7 @@ def _close_event(event: dict[str, Any], signal_date: str, reason: str) -> None:
 
 
 def _notify_mode(notification_type: str) -> str:
-    if notification_type == "LAYOUT_CONFIRMED_DIRECT":
+    if notification_type in {"LAYOUT_CONFIRMED_DIRECT", "TWSE_TRACK_CONFIRMED"}:
         return "HIGH_PRIORITY_NEW"
     if notification_type == "NEW_CANDIDATE":
         return "NEW_CANDIDATE"
@@ -1696,6 +1746,7 @@ def _notify_mode(notification_type: str) -> str:
         "LAYOUT_CONFIRMED_AND_EXTENDED",
         "DAY20_EXTEND",
         "DAY20_EXTEND_STRONG",
+        "TWSE_DAY40_END",
     }:
         return "STATE_UPDATE"
     return "SILENT_STATE"
@@ -1718,6 +1769,8 @@ def _feature_group(feature: str) -> str:
         return "investment_trust"
     if feature.startswith("dealer_self_"):
         return "dealer_self"
+    if feature.startswith("selected_total_"):
+        return "selected_total"
     return "consensus"
 
 

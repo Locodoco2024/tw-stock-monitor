@@ -1,4 +1,4 @@
-name: TPEx institutional daily update
+name: TWSE institutional daily update
 
 on:
   workflow_dispatch:
@@ -9,8 +9,8 @@ on:
         type: string
         default: ""
   schedule:
-    # UTC 10:00 = 台灣時間 18:00
-    - cron: "0 10 * * 1-5"
+    # UTC 10:10 = Taiwan 18:10; runs after the TPEx update.
+    - cron: "10 10 * * 1-5"
 
 permissions:
   contents: write
@@ -22,7 +22,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout main branch
@@ -46,30 +46,30 @@ jobs:
           mkdir -p runtime /tmp/stock-monitor-state
           git fetch origin state || true
           if ! git show-ref --verify --quiet refs/remotes/origin/state; then
-            echo "state branch does not exist; publish the local Phase 5H seed first."
+            echo "state branch does not exist; publish the local TWSE seed first."
             exit 1
           fi
           git archive origin/state | tar -x -C /tmp/stock-monitor-state
           if [ -f /tmp/stock-monitor-state/state.json ]; then
             cp /tmp/stock-monitor-state/state.json runtime/state.json
           fi
-          if [ ! -d /tmp/stock-monitor-state/institutional ]; then
-            echo "institutional seed is missing from the state branch."
+          if [ ! -d /tmp/stock-monitor-state/institutional_twse ]; then
+            echo "institutional_twse seed is missing from the state branch."
             exit 1
           fi
-          cp -R /tmp/stock-monitor-state/institutional runtime/institutional
-          if [ -d /tmp/stock-monitor-state/institutional_twse ]; then
-            cp -R /tmp/stock-monitor-state/institutional_twse runtime/institutional_twse
+          cp -R /tmp/stock-monitor-state/institutional_twse runtime/institutional_twse
+          if [ -d /tmp/stock-monitor-state/institutional ]; then
+            cp -R /tmp/stock-monitor-state/institutional runtime/institutional
           fi
 
-      - name: Update TPEx institutional model
+      - name: Update TWSE institutional model
         shell: bash
         run: |
           EXTRA_ARGS=""
           if [ -n "${{ inputs.as_of_date }}" ]; then
             EXTRA_ARGS="$EXTRA_ARGS --as-of-date ${{ inputs.as_of_date }}"
           fi
-          python -m src.institutional.daily_pipeline update $EXTRA_ARGS
+          python -m src.institutional.twse_daily_pipeline update $EXTRA_ARGS
 
       - name: Save state branch
         shell: bash
@@ -82,9 +82,9 @@ jobs:
           else
             printf '{"records":{},"institutional_notification_keys":{}}\n' > /tmp/stock-monitor-payload/state.json
           fi
-          cp -R runtime/institutional /tmp/stock-monitor-payload/institutional
-          if [ -d runtime/institutional_twse ]; then
-            cp -R runtime/institutional_twse /tmp/stock-monitor-payload/institutional_twse
+          cp -R runtime/institutional_twse /tmp/stock-monitor-payload/institutional_twse
+          if [ -d runtime/institutional ]; then
+            cp -R runtime/institutional /tmp/stock-monitor-payload/institutional
           fi
 
           git config user.name "github-actions[bot]"
@@ -94,7 +94,7 @@ jobs:
           git rm -rf . || true
           git clean -fdx
           cp -R /tmp/stock-monitor-payload/. .
-          git add state.json institutional
-          if [ -d institutional_twse ]; then git add institutional_twse; fi
-          git commit -m "Update TPEx institutional state [skip ci]" || true
+          git add state.json institutional_twse
+          if [ -d institutional ]; then git add institutional; fi
+          git commit -m "Update TWSE institutional state [skip ci]" || true
           git push origin state

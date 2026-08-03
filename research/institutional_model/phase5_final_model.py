@@ -18,12 +18,11 @@ from research.institutional_model.phase4_selection import (
     moving_block_bootstrap_mean_ci,
     resolve_phase3_shard_directory,
 )
-from research.institutional_model.phase4_stability import CORE_FEATURE_COLUMNS
+from research.institutional_model.market_model_spec import market_model_spec
 from research.institutional_model.phase4_target import LinearRankModel, feature_group
 
 
 PHASE5D_VERSION = "phase5d-v1"
-TARGET_MARKET = "tpex"
 TARGET_SCORE_COLUMN = "return_rank_score_daily_percentile"
 PRIMARY_HORIZON_DAYS = 20
 EXTENSION_HORIZON_DAYS = 40
@@ -35,7 +34,7 @@ DEFAULT_PRIMARY_TRACKING_DAYS = 20
 DEFAULT_MAXIMUM_TRACKING_DAYS = 40
 DEFAULT_COOLDOWN_DAYS = 20
 
-TRAINING_SOURCE_COLUMNS = (
+TRAINING_BASE_COLUMNS = (
     "stock_id",
     "stock_name",
     "market_type",
@@ -44,7 +43,6 @@ TRAINING_SOURCE_COLUMNS = (
     "liquidity_pass_20m",
     "label_status_20d",
     "adjusted_return_20d",
-    *CORE_FEATURE_COLUMNS,
 )
 
 OOS_REQUIRED_COLUMNS = (
@@ -59,23 +57,41 @@ OOS_REQUIRED_COLUMNS = (
 
 FEATURE_LABELS = {
     "foreign_flow_pct_1d": "外資單日流量",
+    "foreign_flow_pct_3d": "外資近3日流量",
     "foreign_flow_pct_5d": "外資近5日流量",
+    "foreign_flow_pct_10d": "外資近10日流量",
     "foreign_flow_pct_20d": "外資近20日流量",
     "foreign_buy_day_ratio_5d": "外資近5日買超日比例",
+    "foreign_buy_day_ratio_10d": "外資近10日買超日比例",
     "foreign_buy_day_ratio_20d": "外資近20日買超日比例",
     "foreign_streak": "外資連續買賣超",
     "investment_trust_flow_pct_1d": "投信單日流量",
+    "investment_trust_flow_pct_3d": "投信近3日流量",
     "investment_trust_flow_pct_5d": "投信近5日流量",
+    "investment_trust_flow_pct_10d": "投信近10日流量",
     "investment_trust_flow_pct_20d": "投信近20日流量",
     "investment_trust_buy_day_ratio_5d": "投信近5日買超日比例",
+    "investment_trust_buy_day_ratio_10d": "投信近10日買超日比例",
     "investment_trust_buy_day_ratio_20d": "投信近20日買超日比例",
     "investment_trust_streak": "投信連續買賣超",
     "dealer_self_flow_pct_1d": "自營商自行買賣單日流量",
+    "dealer_self_flow_pct_3d": "自營商自行買賣近3日流量",
     "dealer_self_flow_pct_5d": "自營商自行買賣近5日流量",
+    "dealer_self_flow_pct_10d": "自營商自行買賣近10日流量",
     "dealer_self_flow_pct_20d": "自營商自行買賣近20日流量",
     "dealer_self_buy_day_ratio_5d": "自營商自行買賣近5日買超日比例",
+    "dealer_self_buy_day_ratio_10d": "自營商自行買賣近10日買超日比例",
     "dealer_self_buy_day_ratio_20d": "自營商自行買賣近20日買超日比例",
     "dealer_self_streak": "自營商自行買賣連續買賣超",
+    "selected_total_flow_pct_1d": "三法人合計單日流量",
+    "selected_total_flow_pct_3d": "三法人合計近3日流量",
+    "selected_total_flow_pct_5d": "三法人合計近5日流量",
+    "selected_total_flow_pct_10d": "三法人合計近10日流量",
+    "selected_total_flow_pct_20d": "三法人合計近20日流量",
+    "selected_total_buy_day_ratio_5d": "三法人合計近5日買超日比例",
+    "selected_total_buy_day_ratio_10d": "三法人合計近10日買超日比例",
+    "selected_total_buy_day_ratio_20d": "三法人合計近20日買超日比例",
+    "selected_total_streak": "三法人合計連續買賣超",
     "institutional_agreement_1d": "三法人單日方向一致性",
     "institutional_agreement_5d": "三法人近5日方向一致性",
     "institutional_agreement_20d": "三法人近20日方向一致性",
@@ -85,6 +101,7 @@ FEATURE_LABELS = {
 
 @dataclass(frozen=True)
 class Phase5DSettings:
+    target_market: str = "tpex"
     minimum_daily_stocks: int = 50
     clip_lower_quantile: float = 0.005
     clip_upper_quantile: float = 0.995
@@ -103,6 +120,8 @@ class Phase5DSettings:
     random_seed: int = 20260729
 
     def validate(self) -> None:
+        if self.target_market not in {"twse", "tpex"}:
+            raise ValueError("Phase 5D target_market 只支援 twse 或 tpex")
         if self.minimum_daily_stocks < 20:
             raise ValueError("Phase 5D 每日最低股票數不可低於 20")
         if not 0 <= self.clip_lower_quantile < self.clip_upper_quantile <= 1:
@@ -165,7 +184,7 @@ def run_phase5d_final_model(
     config.validate()
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
-    validation = validate_phase5d_inputs(output)
+    validation = validate_phase5d_inputs(output, target_market=config.target_market)
     model_base = Path(model_root)
     model_base.mkdir(parents=True, exist_ok=True)
     shard_dir = resolve_phase3_shard_directory(
@@ -224,7 +243,9 @@ def run_phase5d_final_model(
     )
 
 
-def validate_phase5d_inputs(output_dir: Path) -> dict[str, Any]:
+def validate_phase5d_inputs(
+    output_dir: Path, *, target_market: str = "tpex"
+) -> dict[str, Any]:
     required = (
         "phase3b_summary.csv",
         "phase4e_summary.csv",
@@ -245,11 +266,23 @@ def validate_phase5d_inputs(output_dir: Path) -> dict[str, Any]:
         raise RuntimeError("Phase 4E 報告尚未完整通過")
     if phase4e.get("primary_horizon_days") != "20":
         raise RuntimeError("Phase 5D 固定使用 Phase 4E 的 20 日主期限")
+    if phase4e.get("market", target_market) != target_market:
+        raise RuntimeError(
+            f"Phase 4E 市場 {phase4e.get('market')} 與 Phase 5D {target_market} 不一致"
+        )
+    if target_market == "twse" and phase4e.get(
+        "return_rank_validation_pass"
+    ) not in {"1", "1.0"}:
+        raise RuntimeError("TWSE return-rank 樣本外驗證未通過，不產生最終模型")
     phase4f = _metric_map(output_dir / "phase4f_summary.csv")
     if phase4f.get("pipeline_status") != "PASS" or phase4f.get(
         "ready_for_lifecycle_decision"
     ) not in {"1", "1.0"}:
         raise RuntimeError("Phase 4F 生命週期報告尚未完整通過")
+    if phase4f.get("market", target_market) != target_market:
+        raise RuntimeError(
+            f"Phase 4F 市場 {phase4f.get('market')} 與 Phase 5D {target_market} 不一致"
+        )
     if phase4f.get("score_column") != TARGET_SCORE_COLUMN:
         raise RuntimeError("Phase 5D 固定使用 return_rank_score 同日百分位")
     return {
@@ -293,14 +326,17 @@ def build_or_load_rank_training_frame(
         shard = pd.read_csv(
             path,
             compression="gzip",
-            usecols=list(TRAINING_SOURCE_COLUMNS),
+            usecols=[
+                *TRAINING_BASE_COLUMNS,
+                *market_model_spec(settings.target_market).feature_columns,
+            ],
             dtype={"stock_id": "string", "signal_date": "string"},
             low_memory=False,
         )
         if shard.empty:
             continue
         selected = shard[
-            (shard["market_type"].astype(str).str.lower() == TARGET_MARKET)
+            (shard["market_type"].astype(str).str.lower() == settings.target_market)
             & (shard["feature_status"].astype(str) == "ok")
             & (pd.to_numeric(shard["liquidity_pass_20m"], errors="coerce") == 1)
             & (shard["label_status_20d"].astype(str) == "ok")
@@ -311,14 +347,17 @@ def build_or_load_rank_training_frame(
         if position % 100 == 0 or position == len(shard_paths):
             print(f"Phase 5D 最終模型資料準備：{position}/{len(shard_paths)}")
     if not frames:
-        raise RuntimeError("Phase 5D 沒有可用的 TPEx 20 日成熟標籤")
+        raise RuntimeError(
+            f"Phase 5D 沒有可用的 {settings.target_market.upper()} 20 日成熟標籤"
+        )
     frame = pd.concat(frames, ignore_index=True)
     frame["adjusted_return_20d"] = pd.to_numeric(
         frame["adjusted_return_20d"], errors="coerce"
     )
-    for column in CORE_FEATURE_COLUMNS:
+    feature_columns = market_model_spec(settings.target_market).feature_columns
+    for column in feature_columns:
         frame[column] = pd.to_numeric(frame[column], errors="coerce")
-    finite = np.isfinite(frame[["adjusted_return_20d", *CORE_FEATURE_COLUMNS]]).all(axis=1)
+    finite = np.isfinite(frame[["adjusted_return_20d", *feature_columns]]).all(axis=1)
     frame = frame[finite].copy()
     counts = frame.groupby("signal_date")["stock_id"].transform("nunique")
     frame = frame[counts >= settings.minimum_daily_stocks].copy()
@@ -332,7 +371,7 @@ def build_or_load_rank_training_frame(
             "signal_date",
             "adjusted_return_20d",
             "future_return_rank_pct_20d",
-            *CORE_FEATURE_COLUMNS,
+            *feature_columns,
         ]
     ].sort_values(["signal_date", "stock_id"], kind="stable")
     frame = frame.reset_index(drop=True)
@@ -368,7 +407,7 @@ def _validate_training_frame(frame: pd.DataFrame, settings: Phase5DSettings) -> 
         "signal_date",
         "adjusted_return_20d",
         "future_return_rank_pct_20d",
-        *CORE_FEATURE_COLUMNS,
+        *market_model_spec(settings.target_market).feature_columns,
     }
     missing = sorted(required.difference(frame.columns))
     if missing:
@@ -378,7 +417,13 @@ def _validate_training_frame(frame: pd.DataFrame, settings: Phase5DSettings) -> 
     duplicates = int(frame.duplicated(["stock_id", "signal_date"]).sum())
     if duplicates:
         raise RuntimeError(f"Phase 5D 最終模型資料重複鍵：{duplicates}")
-    numeric = frame[["adjusted_return_20d", "future_return_rank_pct_20d", *CORE_FEATURE_COLUMNS]]
+    numeric = frame[
+        [
+            "adjusted_return_20d",
+            "future_return_rank_pct_20d",
+            *market_model_spec(settings.target_market).feature_columns,
+        ]
+    ]
     if not np.isfinite(numeric.to_numpy(dtype=np.float64)).all():
         raise RuntimeError("Phase 5D 最終模型資料包含 NaN／Infinity")
     if not frame["future_return_rank_pct_20d"].between(0, 1, inclusive="both").all():
@@ -405,7 +450,8 @@ def build_or_load_final_rank_model(
         if manifest.get("signature") == signature:
             return load_final_rank_model(manifest_path=manifest_path, arrays_path=arrays_path)
 
-    features = training_frame[list(CORE_FEATURE_COLUMNS)].to_numpy(dtype=np.float64)
+    feature_columns = market_model_spec(settings.target_market).feature_columns
+    features = training_frame[list(feature_columns)].to_numpy(dtype=np.float64)
     targets = training_frame["future_return_rank_pct_20d"].to_numpy(dtype=np.float64)
     preprocessor = fit_all_data_preprocessor(features, settings=settings)
     model = fit_all_data_rank_model(
@@ -416,7 +462,7 @@ def build_or_load_final_rank_model(
     )
     bundle = FinalRankModelBundle(
         signature=signature,
-        feature_columns=tuple(CORE_FEATURE_COLUMNS),
+        feature_columns=tuple(feature_columns),
         preprocessor=preprocessor,
         model=model,
         training_rows=len(training_frame),
@@ -485,7 +531,8 @@ def final_rank_model_signature(*, source_sha256: str, settings: Phase5DSettings)
     payload = {
         "version": PHASE5D_VERSION,
         "source_sha256": source_sha256,
-        "features": list(CORE_FEATURE_COLUMNS),
+        "market": settings.target_market,
+        "features": list(market_model_spec(settings.target_market).feature_columns),
         "clip_lower_quantile": settings.clip_lower_quantile,
         "clip_upper_quantile": settings.clip_upper_quantile,
         "quantile_sample_size": settings.quantile_sample_size,
@@ -537,8 +584,12 @@ def load_final_rank_model(*, manifest_path: Path, arrays_path: Path) -> FinalRan
         raise RuntimeError("Phase 5D 最終模型陣列 SHA 不一致")
     arrays = np.load(arrays_path)
     feature_columns = tuple(str(value) for value in manifest["feature_columns"])
-    if feature_columns != tuple(CORE_FEATURE_COLUMNS):
-        raise RuntimeError("Phase 5D 最終模型特徵順序不一致")
+    supported_feature_sets = {
+        market_model_spec("tpex").feature_columns,
+        market_model_spec("twse").feature_columns,
+    }
+    if feature_columns not in supported_feature_sets:
+        raise RuntimeError("Phase 5D 最終模型特徵順序不屬於已驗證市場規格")
     preprocessor = Preprocessor(
         lower=arrays["lower"],
         upper=arrays["upper"],
@@ -793,7 +844,7 @@ def replay_lifecycle_engine(
                 reason = (
                     f"連續{settings.confirmation_days}日維持法人排名前20%，直接列為布局確認"
                     if confirmed
-                    else "法人排名首次進入同日TPEx前10%"
+                    else f"法人排名首次進入同日{settings.target_market.upper()}前10%"
                 )
                 _append_notification(
                     notifications,
@@ -1269,7 +1320,7 @@ def build_final_model_reports(
         [
             {"metric": "phase5d_version", "value": PHASE5D_VERSION},
             {"metric": "model_target", "value": "same_day_future_return_rank_20d"},
-            {"metric": "market", "value": TARGET_MARKET},
+            {"metric": "market", "value": settings.target_market},
             {"metric": "feature_count", "value": len(bundle.feature_columns)},
             {"metric": "training_rows", "value": bundle.training_rows},
             {"metric": "training_signal_dates", "value": bundle.signal_dates},
@@ -1365,7 +1416,7 @@ def build_phase5d_summary(
     metrics = {
         "phase5d_version": PHASE5D_VERSION,
         "pipeline_status": "PASS",
-        "market": TARGET_MARKET,
+        "market": settings.target_market,
         "primary_model": "return_rank_score_20d",
         "primary_tracking_days": settings.primary_tracking_days,
         "maximum_tracking_days": settings.maximum_tracking_days,
@@ -1442,8 +1493,9 @@ def _build_markdown_summary(reports: dict[str, pd.DataFrame]) -> str:
         )
     )
     counts = reports["state_counts"].sort_values("transition_count", ascending=False)
+    market = summary.get("market", "tpex").upper()
     lines = [
-        "# Phase 5D TPEx 法人模型與通知狀態重播",
+        f"# Phase 5D {market} 法人模型與通知狀態重播",
         "",
         f"- 最終模型：`{summary.get('primary_model', '')}`",
         f"- 最終模型成熟訓練列：{summary.get('final_model_training_rows', '')}",
@@ -1454,7 +1506,7 @@ def _build_markdown_summary(reports: dict[str, pd.DataFrame]) -> str:
         "",
         "## 固定規則",
         "",
-        "- 首次進入同日 TPEx 前 10%：法人候選。",
+        f"- 首次進入同日 {market} 前 10%：法人候選。",
         "- 百分位至少 95：高強度標章。",
         "- 連續 5 日維持前 20%：法人布局確認。",
         "- 第 20 日仍在前 20%：延長至第 40 日。",

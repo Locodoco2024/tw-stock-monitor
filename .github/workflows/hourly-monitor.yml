@@ -59,6 +59,9 @@ jobs:
             if [ -d /tmp/stock-monitor-state/institutional ]; then
               cp -R /tmp/stock-monitor-state/institutional runtime/institutional
             fi
+            if [ -d /tmp/stock-monitor-state/institutional_twse ]; then
+              cp -R /tmp/stock-monitor-state/institutional_twse runtime/institutional_twse
+            fi
           fi
 
       - name: Run monitor
@@ -87,6 +90,9 @@ jobs:
           if [ -d runtime/institutional ]; then
             cp -R runtime/institutional /tmp/stock-monitor-payload/institutional
           fi
+          if [ -d runtime/institutional_twse ]; then
+            cp -R runtime/institutional_twse /tmp/stock-monitor-payload/institutional_twse
+          fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -99,6 +105,8 @@ jobs:
           git rm -rf . || true
           git clean -fdx
           cp -R /tmp/stock-monitor-payload/. .
-          git add state.json institutional || true
+          git add state.json
+          if [ -d institutional ]; then git add institutional; fi
+          if [ -d institutional_twse ]; then git add institutional_twse; fi
           git commit -m "Update monitor state [skip ci]" || true
           git push origin state
