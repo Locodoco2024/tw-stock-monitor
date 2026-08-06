@@ -1,8 +1,8 @@
 {
   "phase5h_version": "phase5h-v1",
-  "status": "UPDATED",
+  "status": "ALREADY_CURRENT",
   "signal_date": "2026-08-06",
-  "previous_signal_date": "2026-08-05",
+  "previous_signal_date": "2026-08-06",
   "source": "tpex_official_daily_report",
   "quote_endpoint": "https://www.tpex.org.tw/web/stock/aftertrading/otc_quotes_no1430/stk_wn1430_result.php",
   "flow_endpoint": "https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php",
@@ -10,13 +10,11 @@
   "rolling_rows": 87954,
   "universe_stocks": 891,
   "latest_source_stocks": 785,
-  "required_source_stocks": 755,
-  "catchup_market_dates": [
-    "2026-08-06"
-  ],
-  "catchup_market_date_count": 1,
+  "required_source_stocks": 725,
+  "catchup_market_dates": [],
+  "catchup_market_date_count": 0,
   "eligible_stocks": 260,
   "notification_rows": 1,
-  "generated_at": "2026-08-06T17:14:48+08:00",
-  "ready_to_send": 1
+  "generated_at": "2026-08-06T20:01:18+08:00",
+  "ready_to_send": 0
 }
