@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-25T05:01:20.277133+00:00",
+  "updated_at": "2026-08-25T05:54:19.292529+00:00",
   "records": {
     "ou:1815": {
       "active_profit_thresholds": [],
@@ -62,7 +62,8 @@
     },
     "xiang:2409": {
       "active_profit_thresholds": [
-        30.0
+        30.0,
+        50.0
       ],
       "migrated_from_legacy": false
     },
