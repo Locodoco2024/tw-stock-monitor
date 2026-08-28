@@ -2,20 +2,20 @@
   "phase6d_version": "phase6d-v1",
   "status": "UPDATED",
   "market": "twse",
-  "signal_date": "2026-08-27",
-  "previous_signal_date": "2026-08-26",
+  "signal_date": "2026-08-28",
+  "previous_signal_date": "2026-08-27",
   "source": "twse_official_daily_report",
   "quote_endpoint": "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX",
   "flow_endpoint": "https://www.twse.com.tw/rwd/zh/fund/T86",
   "model_signature": "2712388a500d6bffc146c6924df1e733ed8565556e3d9ea140751ebe948c851c",
-  "rolling_rows": 128555,
+  "rolling_rows": 128553,
   "universe_stocks": 1081,
   "required_source_stocks": 910,
   "catchup_market_dates": [
-    "2026-08-27"
+    "2026-08-28"
   ],
-  "eligible_stocks": 325,
+  "eligible_stocks": 324,
   "notification_rows": 2,
   "ready_to_send": 1,
-  "generated_at": "2026-08-28T04:21:58+08:00"
+  "generated_at": "2026-08-29T05:10:59+08:00"
 }
