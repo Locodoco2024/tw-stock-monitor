@@ -1,22 +1,22 @@
 {
   "phase5h_version": "phase5h-v1",
   "status": "UPDATED",
-  "signal_date": "2026-10-02",
-  "previous_signal_date": "2026-10-01",
+  "signal_date": "2026-10-05",
+  "previous_signal_date": "2026-10-02",
   "source": "tpex_official_daily_report",
   "quote_endpoint": "https://www.tpex.org.tw/web/stock/aftertrading/otc_quotes_no1430/stk_wn1430_result.php",
   "flow_endpoint": "https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php",
   "model_signature": "2a1ff378e0785990debde3f8836fc7e417412757880f476e4c05e593e06580e1",
-  "rolling_rows": 83763,
+  "rolling_rows": 83664,
   "universe_stocks": 891,
-  "latest_source_stocks": 784,
+  "latest_source_stocks": 791,
   "required_source_stocks": 660,
   "catchup_market_dates": [
-    "2026-10-02"
+    "2026-10-05"
   ],
   "catchup_market_date_count": 1,
-  "eligible_stocks": 241,
-  "notification_rows": 0,
-  "generated_at": "2026-10-03T00:05:23+08:00",
+  "eligible_stocks": 242,
+  "notification_rows": 4,
+  "generated_at": "2026-10-06T03:07:28+08:00",
   "ready_to_send": 1
 }
