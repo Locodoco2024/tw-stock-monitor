@@ -1,8 +1,8 @@
 {
   "phase6d_version": "phase6d-v1",
-  "status": "ALREADY_CURRENT",
+  "status": "UPDATED",
   "market": "twse",
-  "signal_date": "2026-10-08",
+  "signal_date": "2026-10-12",
   "previous_signal_date": "2026-10-08",
   "source": "twse_official_daily_report",
   "quote_endpoint": "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX",
@@ -11,9 +11,11 @@
   "rolling_rows": 128521,
   "universe_stocks": 1081,
   "required_source_stocks": 906,
-  "catchup_market_dates": [],
-  "eligible_stocks": 310,
-  "notification_rows": 1,
-  "ready_to_send": 0,
-  "generated_at": "2026-10-10T00:58:29+08:00"
+  "catchup_market_dates": [
+    "2026-10-12"
+  ],
+  "eligible_stocks": 313,
+  "notification_rows": 4,
+  "ready_to_send": 1,
+  "generated_at": "2026-10-13T03:46:45+08:00"
 }
