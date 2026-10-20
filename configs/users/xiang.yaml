@@ -9,74 +9,64 @@ institutional_candidates:
   include_state_updates: true
 
 stocks:
-- symbol: '1795'
-  average_cost: 197.53
+- symbol: '1795'  # 美時
+  average_cost: 192.5
   profit_alerts:
   - 30
   - 50
   - 75
-- symbol: '2356'
-  average_cost: 51.61
+
+- symbol: '2344'  # 華邦電
+  average_cost: 155
   profit_alerts:
   - 30
   - 50
   - 75
-- symbol: '2409'
-  average_cost: 17.02
+
+- symbol: '1785'  # 光洋科
+  average_cost: 98.6
   profit_alerts:
   - 30
   - 50
   - 75
-- symbol: '2498'
-  average_cost: 46.72
+
+- symbol: '3003'  # 健和興
+  average_cost: 62.5
   profit_alerts:
   - 30
   - 50
   - 75
-- symbol: '3003'
-  average_cost: 63.36
+
+- symbol: '3289'  # 宜特
+  average_cost: 135
   profit_alerts:
   - 30
   - 50
   - 75
-- symbol: '3019'
-  average_cost: 138.2
+
+- symbol: '3587'  # 閎康
+  average_cost: 235
   profit_alerts:
   - 30
   - 50
   - 75
-- symbol: '3029'
-  average_cost: 103.9
+
+- symbol: '4566'  # 時碩工業
+  average_cost: 64
   profit_alerts:
   - 30
   - 50
   - 75
-- symbol: '4566'
-  average_cost: 63.69
+
+- symbol: '6239'  # 力成
+  average_cost: 275
   profit_alerts:
   - 30
   - 50
   - 75
-- symbol: '6122'
-  average_cost: 48.82
-  profit_alerts:
-  - 30
-  - 50
-  - 75
-- symbol: '8064'
-  average_cost: 112.43
-  profit_alerts:
-  - 30
-  - 50
-  - 75
-- symbol: '1815'
-  average_cost: 69.65
-  profit_alerts:
-  - 30
-  - 50
-  - 75
-- symbol: '3481'
-  average_cost: 41.66
+
+- symbol: '4977'  # 眾達-KY
+  average_cost: 175
   profit_alerts:
   - 30
   - 50
