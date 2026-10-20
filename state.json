@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-20T10:17:42.461753+00:00",
+  "updated_at": "2026-10-20T11:50:33.440887+00:00",
   "records": {
     "ou:1815": {
       "active_profit_thresholds": [],
@@ -107,6 +107,30 @@
       "migrated_from_legacy": false
     },
     "xiang:3481": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "xiang:2344": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "xiang:1785": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "xiang:3289": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "xiang:3587": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "xiang:6239": {
+      "active_profit_thresholds": [],
+      "migrated_from_legacy": false
+    },
+    "xiang:4977": {
       "active_profit_thresholds": [],
       "migrated_from_legacy": false
     }
