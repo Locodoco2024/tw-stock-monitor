@@ -71,3 +71,17 @@ stocks:
   - 30
   - 50
   - 75
+
+- symbol: '6285'  # 啟碁
+  average_cost: 240
+  profit_alerts:
+  - 30
+  - 50
+  - 75
+
+- symbol: '2421'  # 建準
+  average_cost: 155
+  profit_alerts:
+  - 30
+  - 50
+  - 75
