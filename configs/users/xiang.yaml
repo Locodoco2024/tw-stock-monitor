@@ -85,3 +85,17 @@ stocks:
   - 30
   - 50
   - 75
+
+- symbol: '3044'  # 健鼎
+  average_cost: 520
+  profit_alerts:
+  - 30
+  - 50
+  - 75
+
+- symbol: '6913'  # 鴻呈
+  average_cost: 130
+  profit_alerts:
+  - 30
+  - 50
+  - 75
