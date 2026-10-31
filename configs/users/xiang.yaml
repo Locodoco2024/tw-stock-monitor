@@ -4,7 +4,7 @@ user:
   discord_webhook_key: default
 
 institutional_candidates:
-  enabled: true
+  enabled: false
   max_new_candidates: 6
   include_state_updates: true
 
