@@ -4,8 +4,8 @@ user:
   discord_webhook_key: default
 
 institutional_candidates:
-  enabled: false
-  max_new_candidates: 6
+  enabled: true
+  max_new_candidates: 3
   include_state_updates: true
 
 stocks:
