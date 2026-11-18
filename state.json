@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-17T08:38:48.029631+00:00",
+  "updated_at": "2026-11-18T08:02:05.003119+00:00",
   "records": {
     "ou:1815": {
       "active_profit_thresholds": [],
@@ -423,7 +423,11 @@
       "xiang|twse|P6D-TWSE-3045-2026-11-16|TWSE_TRACK_CONFIRMED|2026-11-16",
       "xiang|twse|P6D-TWSE-3037-2026-11-16|TWSE_TRACK_CONFIRMED|2026-11-16",
       "xiang|twse|P6D-TWSE-2404-2026-09-14|TWSE_DAY40_END|2026-11-16",
-      "xiang|twse|P6D-TWSE-6409-2026-09-14|TWSE_DAY40_END|2026-11-16"
+      "xiang|twse|P6D-TWSE-6409-2026-09-14|TWSE_DAY40_END|2026-11-16",
+      "xiang|twse|P6D-TWSE-2382-2026-11-17|TWSE_TRACK_CONFIRMED|2026-11-17",
+      "xiang|twse|P6D-TWSE-2449-2026-11-17|TWSE_TRACK_CONFIRMED|2026-11-17",
+      "xiang|P5H-6138-2026-11-13|LAYOUT_CONFIRMED|2026-11-17",
+      "xiang|twse|P6D-TWSE-6278-2026-09-15|TWSE_DAY40_END|2026-11-17"
     ]
   }
 }
